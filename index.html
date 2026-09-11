@@ -6,916 +6,547 @@
   <meta name="theme-color" content="#0a0a1a"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
   <title>CARLO'S QUEST</title>
   <link rel="manifest" href="manifest.json"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0a0a1a;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      overflow: hidden;
-      font-family: 'Press Start 2P', monospace;
-      touch-action: none;
-    }
-    #gameWrapper {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw;
-      height: 100vh;
-    }
-    #gameCanvas {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%;
-      height: 100%;
-      image-rendering: pixelated;
-      display: block;
-    }
-    /* HUD */
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body { width:100%; height:100%; overflow:hidden; background:#0a0a1a; touch-action:none; }
+    canvas { display:block; position:fixed; top:0; left:0; }
     #hud {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      padding: 8px 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: rgba(0,0,0,0.6);
-      z-index: 10;
+      position:fixed; top:0; left:0; right:0; z-index:10;
+      padding:8px 12px; display:flex; align-items:center; gap:10px;
+      background:rgba(0,0,0,0.6); font-family:'Press Start 2P',monospace;
     }
-    #energyLabel {
-      font-size: 7px;
-      color: #ffe066;
-      white-space: nowrap;
-    }
-    #energyBarOuter {
-      flex: 1;
-      height: 12px;
-      background: #222;
-      border: 2px solid #555;
-      border-radius: 2px;
-    }
-    #energyBarInner {
-      height: 100%;
-      width: 100%;
-      background: linear-gradient(90deg, #e03030, #ff6644);
-      transition: width 0.3s;
-      border-radius: 1px;
-    }
-    #powerupInfo {
-      font-size: 6px;
-      color: #a0e0ff;
-      white-space: nowrap;
-    }
-    /* Controls */
+    #energyLabel { font-size:7px; color:#ffe066; white-space:nowrap; }
+    #energyBarOuter { flex:1; height:12px; background:#222; border:2px solid #555; border-radius:2px; }
+    #energyBarInner { height:100%; width:100%; background:linear-gradient(90deg,#e03030,#ff6644); border-radius:1px; transition:width 0.3s; }
+    #powerupInfo { font-size:6px; color:#a0e0ff; white-space:nowrap; font-family:'Press Start 2P',monospace; }
     #controls {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      height: 18vh;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      padding: 0 20px 20px;
-      pointer-events: none;
-      z-index: 10;
+      position:fixed; bottom:0; left:0; right:0; z-index:10;
+      height:130px; display:flex; justify-content:space-between;
+      align-items:flex-end; padding:0 20px 20px; pointer-events:none;
     }
-    .btnGroup { display: flex; gap: 10px; pointer-events: all; }
+    .btnGroup { display:flex; gap:10px; pointer-events:all; }
     .ctrlBtn {
-      width: 60px; height: 60px;
-      border-radius: 50%;
-      border: 3px solid rgba(255,255,255,0.3);
-      background: rgba(255,255,255,0.12);
-      color: #fff;
-      font-size: 22px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-      transition: background 0.1s;
+      width:60px; height:60px; border-radius:50%;
+      border:3px solid rgba(255,255,255,0.3); background:rgba(255,255,255,0.12);
+      color:#fff; font-size:22px; display:flex; align-items:center; justify-content:center;
+      cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent;
     }
-    .ctrlBtn:active { background: rgba(255,255,255,0.3); }
-    #btnPowerup {
-      width: 70px; height: 70px;
-      background: rgba(0,160,255,0.25);
-      border-color: #60c0ff;
-      font-size: 28px;
-      flex-direction: column;
-      gap: 2px;
-    }
-    #btnPowerup span { font-size: 5px; color: #a0e0ff; font-family: 'Press Start 2P', monospace; }
-    /* Overlay screens */
+    .ctrlBtn:active { background:rgba(255,255,255,0.3); }
+    #btnPowerup { width:70px; height:70px; background:rgba(0,160,255,0.25); border-color:#60c0ff; font-size:26px; flex-direction:column; gap:1px; }
+    #btnPowerup span { font-size:5px; color:#a0e0ff; font-family:'Press Start 2P',monospace; }
     .overlay {
-      position: absolute;
-      inset: 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      background: rgba(0,0,10,0.88);
-      z-index: 20;
-      gap: 24px;
-      text-align: center;
-      padding: 20px;
+      position:fixed; inset:0; z-index:20;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      background:rgba(0,0,10,0.9); gap:20px; text-align:center; padding:20px;
+      font-family:'Press Start 2P',monospace;
     }
-    .overlay h1 { font-size: 14px; color: #ffe066; line-height: 1.8; }
-    .overlay h2 { font-size: 10px; color: #fff; line-height: 2; }
-    .overlay p  { font-size: 7px; color: #aaa; line-height: 2; }
+    .overlay h1 { font-size:14px; color:#ffe066; line-height:1.8; }
+    .overlay h2 { font-size:10px; color:#fff; line-height:2; }
+    .overlay p  { font-size:7px; color:#aaa; line-height:2; }
     .startBtn {
-      font-family: 'Press Start 2P', monospace;
-      font-size: 9px;
-      background: #e03030;
-      color: #fff;
-      border: none;
-      padding: 14px 28px;
-      cursor: pointer;
-      border-radius: 3px;
-      animation: blink 1s step-end infinite;
+      font-family:'Press Start 2P',monospace; font-size:9px;
+      background:#e03030; color:#fff; border:none; padding:14px 28px;
+      cursor:pointer; border-radius:3px; animation:blink 1s step-end infinite;
     }
-    @keyframes blink { 50% { opacity: 0; } }
-    .hidden { display: none !important; }
+    @keyframes blink { 50% { opacity:0; } }
+    .hidden { display:none !important; }
     #scanlines {
-      position: absolute;
-      inset: 0;
-      background: repeating-linear-gradient(
-        0deg, transparent, transparent 3px,
-        rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px
-      );
-      pointer-events: none;
-      z-index: 5;
+      position:fixed; inset:0; pointer-events:none; z-index:5;
+      background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.07) 3px,rgba(0,0,0,0.07) 4px);
     }
   </style>
 </head>
 <body>
-<div id="gameWrapper">
-  <canvas id="gameCanvas"></canvas>
-  <div id="scanlines"></div>
-
-  <!-- HUD -->
-  <div id="hud">
-    <span id="energyLabel">ENERGY</span>
-    <div id="energyBarOuter"><div id="energyBarInner"></div></div>
-    <span id="powerupInfo">📱 x<span id="powerupCount">3</span></span>
+<canvas id="gameCanvas"></canvas>
+<div id="scanlines"></div>
+<div id="hud">
+  <span id="energyLabel">ENERGY</span>
+  <div id="energyBarOuter"><div id="energyBarInner"></div></div>
+  <span id="powerupInfo">📱 x<span id="powerupCount">3</span></span>
+</div>
+<div id="controls">
+  <div class="btnGroup">
+    <div class="ctrlBtn" id="btnLeft">◀</div>
+    <div class="ctrlBtn" id="btnRight">▶</div>
   </div>
-
-  <!-- Touch Controls -->
-  <div id="controls">
-    <div class="btnGroup">
-      <div class="ctrlBtn" id="btnLeft">◀</div>
-      <div class="ctrlBtn" id="btnRight">▶</div>
-    </div>
-    <div class="btnGroup">
-      <div class="ctrlBtn" id="btnPowerup">📱<span>CHIAMA</span></div>
-      <div class="ctrlBtn" id="btnJump">▲</div>
-    </div>
-  </div>
-
-  <!-- START SCREEN -->
-  <div class="overlay" id="screenStart">
-    <h1>CARLO'S<br/>QUEST ♥</h1>
-    <h2>LIVELLO 1<br/>DA MILANO<br/>A BERLINO</h2>
-    <p>Supera gli ostacoli<br/>e raggiungi Ilia!</p>
-    <button class="startBtn" id="btnStart">PRESS START</button>
-  </div>
-
-  <!-- GAME OVER -->
-  <div class="overlay hidden" id="screenGameOver">
-    <h1 style="color:#e03030">GAME<br/>OVER</h1>
-    <p>L'energia è finita...<br/>riprova!</p>
-    <button class="startBtn" id="btnRetry">RIPROVA</button>
-  </div>
-
-  <!-- WIN SCREEN -->
-  <div class="overlay hidden" id="screenWin">
-    <h1>❤️<br/>BERLINO!</h1>
-    <h2>CARLO HA<br/>RAGGIUNTO<br/>ILIA!</h2>
-    <p>Livello completato!</p>
-    <button class="startBtn" id="btnNext" style="background:#2d7a27">CONTINUA ▶</button>
+  <div class="btnGroup">
+    <div class="ctrlBtn" id="btnPowerup">📱<span>CHIAMA</span></div>
+    <div class="ctrlBtn" id="btnJump">▲</div>
   </div>
 </div>
 
-<script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+<div class="overlay" id="screenStart">
+  <h1>CARLO'S<br/>QUEST ♥</h1>
+  <h2>LIVELLO 1<br/>DA MILANO<br/>A BERLINO</h2>
+  <p>Supera gli ostacoli<br/>e raggiungi Ilia!</p>
+  <button class="startBtn" id="btnStart">PRESS START</button>
+</div>
+<div class="overlay hidden" id="screenGameOver">
+  <h1 style="color:#e03030">GAME<br/>OVER</h1>
+  <p>L'energia è finita...<br/>riprova!</p>
+  <button class="startBtn" id="btnRetry">RIPROVA</button>
+</div>
+<div class="overlay hidden" id="screenWin">
+  <h1>❤️<br/>BERLINO!</h1>
+  <h2>CARLO HA<br/>RAGGIUNTO<br/>ILIA!</h2>
+  <button class="startBtn" id="btnNext" style="background:#2d7a27">CONTINUA ▶</button>
+</div>
 
-// Responsive canvas
-function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-resize();
-window.addEventListener('resize', resize);
+<script>
+// ── CANVAS SETUP ─────────────────────────────────────
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+
+// W/H are plain variables, updated on resize
+let W = window.innerWidth;
+let H = window.innerHeight;
+canvas.width  = W;
+canvas.height = H;
+
+window.addEventListener('resize', () => {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width  = W;
+  canvas.height = H;
+});
+
+// Ground is always 78% down the screen
+const GROUND_Y    = () => Math.floor(H * 0.78);
+const LEVEL_WIDTH = () => W * 6;
 
 // ── PALETTE ──────────────────────────────────────────
 const C = {
-  sky1: '#1a1a3e', sky2: '#2a1a5e',
-  ground: '#3a2a1a', groundTop: '#5a4a2a',
-  hair: '#c8920a', hairH: '#e0a800', hairS: '#7a5500',
-  skin: '#fcd5a0', skinS: '#e8b888',
-  shirt: '#9b1515', shirtS: '#5a0a0a',
-  pants: '#1e1e1e', shoes: '#2d5a27', shoeS: '#e8e8d8',
-  eyes: '#5bc8f0', eyeD: '#0a2a5c',
-  // Ilia
-  iHair: '#f07ab0', iShirt: '#1a1a1a', iPants: '#141414',
-  iEyes: '#2a1a0e',
-  // HUD
-  energy: '#e03030', energyLow: '#ffaa00',
+  hair:'#c8920a', hairH:'#e0a800', hairS:'#7a5500',
+  skin:'#fcd5a0', skinS:'#e8b888',
+  shirt:'#9b1515', shirtS:'#5a0a0a',
+  pants:'#1e1e1e', shoes:'#2d5a27', shoeS:'#e8e8d8',
+  eyes:'#5bc8f0',  eyeD:'#0a2a5c',
+  iHair:'#f07ab0', iShirt:'#1a1a1a', iPants:'#141414', iEyes:'#2a1a0e',
 };
 
-// ── GAME STATE ────────────────────────────────────────
-const GW = () => canvas.width || window.innerWidth;
-const GH = () => canvas.height || window.innerHeight;
-const GROUND_Y = () => Math.floor(GH() * 0.78);
-const LEVEL_WIDTH = () => GW() * 6;
-
+// ── STATE ─────────────────────────────────────────────
 let state = 'start';
-let energy = 100;
-let powerups = 3;
-let camera = 0;
-let keys = {};
-let obstacles = [];
-let particles = [];
-let bgElements = [];
-let levelComplete = false;
-let powerupCooldown = 0;
-let shake = 0;
-let obstaclesCleared = 0;
+let energy, powerups, camera, obstacles, particles, bgElements;
+let levelComplete, powerupCooldown, shake, callEffectTimer;
+let player, ilia;
+let leftPressed=false, rightPressed=false, jumpPressed=false, powerupPressed=false;
 
-// Player
-let player = {};
-// Ilia (goal)
-let ilia = {};
+const GRAVITY    = 0.55;
+const JUMP_FORCE = -13;
+const SPEED      = 3.5;
 
+// ── INIT ──────────────────────────────────────────────
 function initGame() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  energy = 100;
-  powerups = 3;
-  camera = 0;
-  obstacles = [];
-  particles = [];
-  levelComplete = false;
-  powerupCooldown = 0;
-  shake = 0;
-  obstaclesCleared = 0;
+  // Re-read dimensions at init time
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width  = W;
+  canvas.height = H;
 
-  player = {
-    x: 80, y: GROUND_Y(),
-    vx: 0, vy: 0,
-    w: 28, h: 48,
-    onGround: false,
-    frame: 0, frameTimer: 0,
-    facing: 1,
-    invincible: 0,
-  };
+  energy = 100; powerups = 3; camera = 0;
+  obstacles = []; particles = []; bgElements = [];
+  levelComplete = false; powerupCooldown = 0; shake = 0; callEffectTimer = 0;
 
-  ilia = {
-    x: LEVEL_WIDTH() - 120,
-    y: GROUND_Y(),
-    w: 22, h: 38,
-    frame: 0, frameTimer: 0,
-  };
+  const gy = GROUND_Y();
+
+  player = { x:80, y:gy, vx:0, vy:0, w:28, h:48, onGround:true, frame:0, frameTimer:0, facing:1, invincible:0 };
+  ilia   = { x:LEVEL_WIDTH()-120, y:gy, w:22, h:38, frame:0, frameTimer:0 };
 
   generateLevel();
   generateBg();
   updateHUD();
 }
 
-function generateBg() {
-  bgElements = [];
-  const lw = LEVEL_WIDTH();
-  // Stars
-  for (let i = 0; i < 80; i++) {
-    bgElements.push({ type: 'star', x: Math.random() * lw, y: Math.random() * GH() * 0.5, r: Math.random() * 2 + 0.5 });
-  }
-  // Buildings Milan-style (first half) - darker/greyer
-  for (let i = 0; i < 8; i++) {
-    const h = 80 + Math.random() * 120;
-    bgElements.push({ type: 'building', x: 100 + i * 320 + Math.random() * 80, h, w: 60 + Math.random() * 40, color: '#1e2030', winColor: '#ffe066', city: 'milan' });
-  }
-  // Duomo-ish silhouette at start
-  bgElements.push({ type: 'duomo', x: 200 });
-  // Buildings Berlin-style (second half) - different style
-  for (let i = 0; i < 8; i++) {
-    const h = 100 + Math.random() * 150;
-    bgElements.push({ type: 'building', x: lw * 0.55 + i * 300 + Math.random() * 80, h, w: 55 + Math.random() * 50, color: '#1a1e1a', winColor: '#80d0ff', city: 'berlin' });
-  }
-  // TV Tower (Alexanderplatz)
-  bgElements.push({ type: 'tvtower', x: lw - 300 });
-  // Graffiti wall sections
-  for (let i = 0; i < 4; i++) {
-    bgElements.push({ type: 'graffitiwall', x: lw * 0.5 + i * 200, y: GROUND_Y() - 80 });
-  }
-}
-
+// ── LEVEL GEN ─────────────────────────────────────────
 function generateLevel() {
   const lw = LEVEL_WIDTH();
-  // 3 obstacles at spread positions
-  const positions = [lw * 0.25, lw * 0.5, lw * 0.72];
-  const types = ['corso', 'pattumiera', 'concerto'];
-  types.forEach((type, i) => {
-    obstacles.push({
-      type,
-      x: positions[i],
-      y: GROUND_Y(),
-      w: type === 'concerto' ? 160 : 36,
-      h: type === 'concerto' ? 42 : 44,
-      active: true,
-      frame: 0, frameTimer: 0,
-    });
+  const gy = GROUND_Y();
+  const pos = [lw*0.25, lw*0.5, lw*0.72];
+  ['corso','pattumiera','concerto'].forEach((type,i) => {
+    obstacles.push({ type, x:pos[i], y:gy, w:type==='concerto'?160:36, h:type==='concerto'?42:44, active:true, cleared:false });
   });
-
-  // Platforms for concerto section
-  obstacles.push({ type: 'platform', x: positions[2] - 20, y: GROUND_Y() - 60, w: 200, h: 14, active: true });
+  obstacles.push({ type:'platform', x:pos[2]-20, y:gy-70, w:200, h:14, active:true, cleared:false });
 }
 
-// ── DRAWING ───────────────────────────────────────────
-function px(n) { return Math.round(n); }
-
-function drawRect(x, y, w, h, color) {
-  ctx.fillStyle = color;
-  ctx.fillRect(px(x - camera + (shake ? (Math.random()-0.5)*shake : 0)), px(y), px(w), px(h));
+function generateBg() {
+  const lw = LEVEL_WIDTH();
+  for (let i=0;i<80;i++) bgElements.push({type:'star',x:Math.random()*lw,y:Math.random()*H*0.5,r:Math.random()*2+0.5});
+  for (let i=0;i<8;i++) {
+    const h=80+Math.random()*120;
+    bgElements.push({type:'building',x:100+i*320+Math.random()*80,h,w:60+Math.random()*40,color:'#1e2030',winColor:'#ffe066'});
+  }
+  bgElements.push({type:'duomo',x:200});
+  for (let i=0;i<8;i++) {
+    const h=100+Math.random()*150;
+    bgElements.push({type:'building',x:lw*0.55+i*300+Math.random()*80,h,w:55+Math.random()*50,color:'#1a1e1a',winColor:'#80d0ff'});
+  }
+  bgElements.push({type:'tvtower',x:lw-300});
+  for (let i=0;i<4;i++) bgElements.push({type:'graffitiwall',x:lw*0.5+i*200,y:GROUND_Y()-80});
 }
+
+// ── DRAW HELPERS ──────────────────────────────────────
+function r(x,y,w,h,col) { ctx.fillStyle=col; ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h)); }
+const sc = (x) => x - camera + (shake?(Math.random()-0.5)*shake:0);
 
 function drawBackground() {
-  // Sky gradient
-  const grad = ctx.createLinearGradient(0, 0, 0, GH());
-  grad.addColorStop(0, '#05051a');
-  grad.addColorStop(0.6, '#1a1040');
-  grad.addColorStop(1, '#2a1a10');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, GW(), GH());
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#05051a'); grad.addColorStop(0.6,'#1a1040'); grad.addColorStop(1,'#2a1a10');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
 
+  const gy = GROUND_Y();
   bgElements.forEach(el => {
-    const sx = el.x - camera * 0.4; // parallax
-    if (sx < -300 || sx > GW() + 300) return;
-
-    if (el.type === 'star') {
-      ctx.fillStyle = `rgba(255,255,255,${0.4 + Math.random() * 0.1})`;
-      ctx.fillRect(px(el.x - camera * 0.15), px(el.y), el.r, el.r);
-    }
-    else if (el.type === 'building') {
-      const bx = px(sx);
-      const by = px(GH() - 160 - el.h);
-      ctx.fillStyle = el.color;
-      ctx.fillRect(bx, by, el.w, el.h);
-      // windows
-      ctx.fillStyle = el.winColor;
-      for (let wy = by + 10; wy < GH() - 160 - 10; wy += 18) {
-        for (let wx = bx + 6; wx < bx + el.w - 6; wx += 14) {
-          if (Math.random() > 0.4) ctx.fillRect(wx, wy, 6, 8);
-        }
-      }
-    }
-    else if (el.type === 'duomo') {
-      // Simple Duomo silhouette
-      ctx.fillStyle = '#151525';
-      ctx.fillRect(px(sx - 40), px(GH() - 280), 80, 120);
-      // spires
-      for (let s = -30; s <= 30; s += 15) {
-        ctx.fillRect(px(sx + s - 3), px(GH() - 310 - Math.abs(s)), 6, 30 + Math.abs(s));
-      }
-      ctx.fillRect(px(sx - 5), px(GH() - 330), 10, 50);
-    }
-    else if (el.type === 'tvtower') {
-      // Fernsehturm
-      ctx.fillStyle = '#1a2a1a';
-      ctx.fillRect(px(sx - 4), px(GH() - 380), 8, 250);
-      // sphere
-      ctx.fillStyle = '#2a3a2a';
-      ctx.beginPath();
-      ctx.arc(px(sx), px(GH() - 260), 22, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#80d0ff';
-      ctx.fillRect(px(sx - 2), px(GH() - 390), 4, 40);
-    }
-    else if (el.type === 'graffitiwall') {
-      ctx.fillStyle = '#1a1e18';
-      ctx.fillRect(px(sx), px(el.y), 180, 80);
-      // graffiti squiggles
-      const colors = ['#ff4488', '#44ffaa', '#ffcc00', '#44aaff'];
-      colors.forEach((c, ci) => {
-        ctx.fillStyle = c;
-        ctx.fillRect(px(sx + 10 + ci * 40), px(el.y + 15), 25, 8);
-        ctx.fillRect(px(sx + 15 + ci * 40), px(el.y + 28), 18, 6);
+    const sx = el.x - camera*0.4;
+    if (sx < -300 || sx > W+300) return;
+    if (el.type==='star') {
+      ctx.fillStyle=`rgba(255,255,255,0.5)`;
+      ctx.fillRect(Math.round(el.x-camera*0.15),Math.round(el.y),el.r,el.r);
+    } else if (el.type==='building') {
+      const bx=Math.round(sx), by=Math.round(gy-el.h);
+      r(bx,by,el.w,el.h,el.color);
+      ctx.fillStyle=el.winColor;
+      for (let wy=by+10;wy<gy-10;wy+=18)
+        for (let wx=bx+6;wx<bx+el.w-6;wx+=14)
+          if (Math.random()>0.4) ctx.fillRect(wx,wy,6,8);
+    } else if (el.type==='duomo') {
+      ctx.fillStyle='#151525';
+      ctx.fillRect(Math.round(sx-40),gy-180,80,180);
+      for (let s=-30;s<=30;s+=15) ctx.fillRect(Math.round(sx+s-3),gy-210-Math.abs(s),6,30+Math.abs(s));
+      ctx.fillRect(Math.round(sx-5),gy-230,10,50);
+    } else if (el.type==='tvtower') {
+      ctx.fillStyle='#1a2a1a';
+      ctx.fillRect(Math.round(sx-4),gy-280,8,280);
+      ctx.fillStyle='#2a3a2a';
+      ctx.beginPath(); ctx.arc(Math.round(sx),gy-180,22,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#80d0ff';
+      ctx.fillRect(Math.round(sx-2),gy-300,4,40);
+    } else if (el.type==='graffitiwall') {
+      r(sx,el.y,180,80,'#1a1e18');
+      ['#ff4488','#44ffaa','#ffcc00','#44aaff'].forEach((c,ci)=>{
+        r(sx+10+ci*40,el.y+15,25,8,c);
+        r(sx+15+ci*40,el.y+28,18,6,c);
       });
     }
   });
 
   // Ground
-  ctx.fillStyle = C.groundTop;
-  ctx.fillRect(0, px(GROUND_Y()), GW(), 8);
-  ctx.fillStyle = C.ground;
-  ctx.fillRect(0, px(GROUND_Y() + 8), GW(), GH() - GROUND_Y());
-  // ground detail tiles
-  ctx.fillStyle = '#4a3a1a';
-  for (let tx = (-camera % 32); tx < GW(); tx += 32) {
-    ctx.fillRect(px(tx), px(GROUND_Y()), 1, 8);
-  }
+  r(0,gy,W,8,'#5a4a2a');
+  r(0,gy+8,W,H-gy,'#3a2a1a');
+  ctx.fillStyle='#4a3a1a';
+  for (let tx=(-camera%32);tx<W;tx+=32) ctx.fillRect(Math.round(tx),gy,1,8);
 }
 
-// Draw Carlo pixel art
-function drawCarlo(x, y, facing, frame, invincible) {
-  if (invincible > 0 && Math.floor(invincible / 4) % 2 === 0) return;
-  const sx = px(x - camera);
-  const sy = px(y);
-  const f = facing; // 1=right, -1=left
+function drawCarlo() {
+  if (player.invincible>0 && Math.floor(player.invincible/4)%2===0) return;
   ctx.save();
-  if (f === -1) { ctx.translate(sx + 14, 0); ctx.scale(-1, 1); ctx.translate(-14, 0); } else { ctx.translate(sx, 0); }
-
-  const p = (rx, ry, rw, rh, color) => { ctx.fillStyle = color; ctx.fillRect(rx, ry, rw, rh); };
-
+  const sx = Math.round(sc(player.x));
+  const sy = Math.round(player.y - player.h);
+  ctx.translate(sx, sy);
+  if (player.facing===-1) { ctx.translate(player.w,0); ctx.scale(-1,1); }
+  const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
   // shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.fillRect(3, 46, 22, 4);
-
+  ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.fillRect(3,player.h-2,22,4);
   // shoes
-  p(1, 42, 12, 6, C.shoes); p(1, 46, 12, 3, C.shoeS);
-  p(15, 42, 12, 6, C.shoes); p(15, 46, 12, 3, C.shoeS);
+  p(1,player.h-6,12,6,C.shoes); p(1,player.h-3,12,3,C.shoeS);
+  p(15,player.h-6,12,6,C.shoes); p(15,player.h-3,12,3,C.shoeS);
   // pants
-  p(3, 28, 10, 16, C.pants); p(15, 28, 10, 16, C.pants);
+  p(3,player.h-20,10,16,C.pants); p(15,player.h-20,10,16,C.pants);
   // shirt
-  p(1, 14, 26, 16, C.shirt);
-  p(1, 14, 4, 14, C.shirtS + '99');
-  p(23, 14, 4, 14, C.shirtS + '99');
-  // arms (animated)
-  const armOff = frame === 1 ? -3 : (frame === 2 ? 3 : 0);
-  p(-3, 16 + armOff, 5, 12, C.shirt); p(-3, 27 + armOff, 5, 4, C.skin);
-  p(26, 16 - armOff, 5, 12, C.shirt); p(26, 27 - armOff, 5, 4, C.skin);
+  p(1,player.h-34,26,16,C.shirt);
+  p(1,player.h-34,4,14,C.shirtS+'88'); p(23,player.h-34,4,14,C.shirtS+'88');
+  // arms
+  const af=player.frame===1?-3:(player.frame===2?3:0);
+  p(-3,player.h-32+af,5,12,C.shirt); p(-3,player.h-21+af,5,4,C.skin);
+  p(26,player.h-32-af,5,12,C.shirt); p(26,player.h-21-af,5,4,C.skin);
   // neck
-  p(10, 10, 8, 5, C.skin);
+  p(10,player.h-38,8,5,C.skin);
   // face
-  p(5, 0, 18, 12, C.skin);
-  p(5, 11, 18, 3, C.skinS);
+  p(5,player.h-48,18,12,C.skin); p(5,player.h-37,18,3,C.skinS);
   // hair
-  p(4, 0, 20, 4, C.hair);
-  p(2, 2, 24, 3, C.hair);
-  p(6, 0, 5, 7, C.hairH); // highlight ciuffo
+  p(4,player.h-48,20,4,C.hair); p(2,player.h-46,24,3,C.hair);
+  p(6,player.h-48,5,7,C.hairH);
   // eyes
-  p(7, 4, 5, 5, C.eyes); p(16, 4, 5, 5, C.eyes);
-  p(8, 5, 3, 3, C.eyeD); p(17, 5, 3, 3, C.eyeD);
-  p(8, 5, 2, 2, '#fff'); p(17, 5, 2, 2, '#fff');
+  p(7,player.h-44,5,5,C.eyes); p(16,player.h-44,5,5,C.eyes);
+  p(8,player.h-43,3,3,C.eyeD); p(17,player.h-43,3,3,C.eyeD);
+  p(8,player.h-43,2,2,'#fff'); p(17,player.h-43,2,2,'#fff');
   // mouth
-  p(10, 10, 8, 2, '#c05030');
-
+  p(10,player.h-38,8,2,'#c05030');
   ctx.restore();
 }
 
-// Draw Ilia pixel art (smaller, pink hair)
-function drawIlia(x, y, frame) {
-  const sx = px(x - camera);
-  const sy = px(y);
-  ctx.save(); ctx.translate(sx, sy);
-  const p = (rx, ry, rw, rh, color) => { ctx.fillStyle = color; ctx.fillRect(rx, ry, rw, rh); };
-
-  // shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.fillRect(2, 36, 18, 3);
-
-  // shoes
-  p(1, 33, 8, 5, '#0f0f0f'); p(11, 33, 8, 5, '#0f0f0f');
-  // pants
-  p(2, 22, 8, 13, C.iPants); p(12, 22, 8, 13, C.iPants);
-  // shirt
-  p(1, 11, 20, 12, C.iShirt);
-  // arms
-  p(-2, 12, 4, 10, C.iShirt); p(-2, 21, 4, 4, C.skin);
-  p(20, 12, 4, 10, C.iShirt); p(20, 21, 4, 4, C.skin);
-  // neck
-  p(8, 8, 6, 4, C.skin);
-  // face
-  p(4, 0, 14, 10, C.skin);
-  p(4, 9, 14, 2, C.skinS);
-  // hair pink long
-  p(-1, 9, 4, 28, C.iHair); // side strands
-  p(19, 9, 4, 28, C.iHair);
-  p(2, 0, 18, 4, C.iHair);
-  p(0, 2, 22, 4, C.iHair);
-  p(3, 0, 4, 10, '#f8a0c8'); // highlight
-  // eyes
-  p(6, 3, 4, 4, C.iEyes); p(13, 3, 4, 4, C.iEyes);
-  p(6, 3, 2, 2, '#fff'); p(13, 3, 2, 2, '#fff');
-  // mouth happy
-  const waveOff = Math.sin(Date.now() / 400) * 2;
-  p(8, 9, 6, 2, '#c05848');
-  // wave animation
-  if (Math.floor(Date.now() / 500) % 2 === 0) {
-    p(22, 5 + waveOff, 4, 10, C.iShirt);
-    p(22, 4 + waveOff, 4, 4, C.skin);
-  }
-
+function drawIlia() {
+  const sx = Math.round(sc(ilia.x));
+  const sy = Math.round(ilia.y - ilia.h);
+  ctx.save(); ctx.translate(sx,sy);
+  const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
+  const wv = Math.floor(Date.now()/500)%2===0 ? -3 : 0;
+  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fillRect(2,ilia.h,18,3);
+  p(1,ilia.h-5,8,5,'#0f0f0f'); p(11,ilia.h-5,8,5,'#0f0f0f');
+  p(2,ilia.h-18,8,14,C.iPants); p(12,ilia.h-18,8,14,C.iPants);
+  p(1,ilia.h-28,20,12,C.iShirt);
+  p(-2,ilia.h-27,4,10,C.iShirt); p(-2,ilia.h-18,4,4,C.skin);
+  p(20,ilia.h-27+wv,4,10,C.iShirt); p(20,ilia.h-18+wv,4,4,C.skin);
+  p(8,ilia.h-32,6,4,C.skin);
+  p(4,ilia.h-38,14,8,C.skin); p(4,ilia.h-31,14,2,C.skinS);
+  p(-1,ilia.h-30,4,26,C.iHair); p(19,ilia.h-30,4,26,C.iHair);
+  p(2,ilia.h-38,18,4,C.iHair); p(0,ilia.h-35,22,4,C.iHair);
+  p(3,ilia.h-38,4,8,'#f8a0c8');
+  p(6,ilia.h-35,4,4,C.iEyes); p(13,ilia.h-35,4,4,C.iEyes);
+  p(6,ilia.h-35,2,2,'#fff'); p(13,ilia.h-35,2,2,'#fff');
+  p(8,ilia.h-29,6,2,'#c05848');
   ctx.restore();
 }
 
 function drawObstacle(ob) {
   if (!ob.active) return;
-  const sx = px(ob.x - camera);
-  if (sx < -200 || sx > GW() + 200) return;
-  const sy = px(ob.y);
-
-  if (ob.type === 'platform') {
-    ctx.fillStyle = '#4a3a1a';
-    ctx.fillRect(sx, sy, ob.w, ob.h);
-    ctx.fillStyle = '#6a5a2a';
-    ctx.fillRect(sx, sy, ob.w, 3);
-    return;
+  const sx = Math.round(sc(ob.x));
+  if (sx < -250 || sx > W+250) return;
+  const sy = Math.round(ob.y - ob.h);
+  if (ob.type==='platform') {
+    r(sx,sy,ob.w,ob.h,'#4a3a1a'); r(sx,sy,ob.w,3,'#6a5a2a'); return;
   }
-
-  ctx.save(); ctx.translate(sx, sy);
-  const p = (rx, ry, rw, rh, color) => { ctx.fillStyle = color; ctx.fillRect(rx, ry, rw, rh); };
-
-  if (ob.type === 'corso') {
-    // Professor enemy: walking book guy
-    const bob = Math.sin(Date.now() / 300) * 3;
-    p(8, -2 + bob, 20, 4, '#8b6914'); // mortarboard
-    p(4, -6 + bob, 28, 6, '#8b6914');
-    p(8, 2 + bob, 20, 18, '#2a4a8a'); // body
-    p(4, 4 + bob, 6, 14, '#2a4a8a');
-    p(26, 4 + bob, 6, 14, '#2a4a8a');
-    p(10, 2 + bob, 16, 6, '#fcd5a0'); // face
-    p(12, 4 + bob, 4, 4, '#2a2a6a'); p(19, 4 + bob, 4, 4, '#2a2a6a'); // eyes
-    p(26, 10 + bob, 10, 14, '#c8a830'); // book held
-    p(27, 11 + bob, 8, 12, '#f0e8c0');
-    p(8, 20 + bob, 8, 14, '#1a3a6a'); p(20, 20 + bob, 8, 14, '#1a3a6a'); // legs
-    // label
-    ctx.font = '5px "Press Start 2P"'; ctx.fillStyle = '#ffe066';
-    ctx.fillText('CORSO!', -4, -14 + bob);
-  }
-  else if (ob.type === 'pattumiera') {
-    // Rolling trash bag
-    const roll = (Date.now() / 200) % (Math.PI * 2);
-    ctx.save(); ctx.translate(18, 22); ctx.rotate(roll * 0.3); ctx.translate(-18, -22);
-    p(4, 4, 28, 30, '#2a4a2a'); // bag body
-    p(0, 20, 8, 14, '#2a4a2a'); // dragging part
-    p(14, 0, 8, 6, '#1a3a1a'); // tie
-    p(6, 6, 6, 6, '#3a6a3a'); p(22, 10, 5, 5, '#3a6a3a'); // highlights
-    ctx.restore();
-    ctx.font = '5px "Press Start 2P"'; ctx.fillStyle = '#ffe066';
-    ctx.fillText('SPAZ!', 0, -6);
-  }
-  else if (ob.type === 'concerto') {
-    // Group of concert people jumping
-    const people = [
-      { x: 0, col: '#d42020', hair: '#f5c518' },
-      { x: 40, col: '#204ad4', hair: '#cc4488' },
-      { x: 80, col: '#20a020', hair: '#aaaaaa' },
-      { x: 120, col: '#8020c0', hair: '#ffaa00' },
-    ];
-    people.forEach(per => {
-      const jumpOff = Math.sin((Date.now() / 250) + per.x) * 8;
-      p(per.x + 6, -24 + jumpOff, 14, 6, per.hair);
-      p(per.x + 4, -18 + jumpOff, 18, 16, per.col);
-      p(per.x + 2, -20 + jumpOff, 4, 14, per.col);
-      p(per.x + 20, -20 + jumpOff, 4, 14, per.col);
-      p(per.x + 6, -30 + jumpOff, 14, 8, C.skin);
-      p(per.x + 4, -2 + jumpOff, 8, 14, '#222');
-      p(per.x + 14, -2 + jumpOff, 8, 14, '#222');
+  ctx.save(); ctx.translate(sx,sy);
+  const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
+  if (ob.type==='corso') {
+    const b=Math.sin(Date.now()/300)*3;
+    p(8,-2+b,20,4,'#8b6914'); p(4,-6+b,28,6,'#8b6914');
+    p(8,2+b,20,18,'#2a4a8a'); p(4,4+b,6,14,'#2a4a8a'); p(26,4+b,6,14,'#2a4a8a');
+    p(10,2+b,16,6,'#fcd5a0');
+    p(12,4+b,4,4,'#2a2a6a'); p(19,4+b,4,4,'#2a2a6a');
+    p(26,10+b,10,14,'#c8a830'); p(27,11+b,8,12,'#f0e8c0');
+    p(8,20+b,8,14,'#1a3a6a'); p(20,20+b,8,14,'#1a3a6a');
+    ctx.font='5px "Press Start 2P"'; ctx.fillStyle='#ffe066';
+    ctx.fillText('CORSO!',-4,-18+b);
+  } else if (ob.type==='pattumiera') {
+    p(4,4,28,30,'#2a4a2a'); p(0,20,8,14,'#2a4a2a'); p(14,0,8,6,'#1a3a1a');
+    p(6,6,6,6,'#3a6a3a'); p(22,10,5,5,'#3a6a3a');
+    ctx.font='5px "Press Start 2P"'; ctx.fillStyle='#ffe066';
+    ctx.fillText('SPAZ!',0,-10);
+  } else if (ob.type==='concerto') {
+    [{x:0,col:'#d42020',hair:'#f5c518'},{x:40,col:'#204ad4',hair:'#cc4488'},
+     {x:80,col:'#20a020',hair:'#aaa'},{x:120,col:'#8020c0',hair:'#ffaa00'}]
+    .forEach(per=>{
+      const j=Math.sin(Date.now()/250+per.x)*8;
+      p(per.x+6,-24+j,14,6,per.hair); p(per.x+4,-18+j,18,16,per.col);
+      p(per.x+2,-20+j,4,14,per.col); p(per.x+20,-20+j,4,14,per.col);
+      p(per.x+6,-30+j,14,8,C.skin);
+      p(per.x+4,-2+j,8,14,'#222'); p(per.x+14,-2+j,8,14,'#222');
     });
-    ctx.font = '5px "Press Start 2P"'; ctx.fillStyle = '#ffe066';
-    ctx.fillText('CONCERTO!', 20, -42);
+    ctx.font='5px "Press Start 2P"'; ctx.fillStyle='#ffe066';
+    ctx.fillText('CONCERTO!',10,-48);
   }
-
   ctx.restore();
 }
 
 function drawParticles() {
-  particles = particles.filter(p => p.life > 0);
-  particles.forEach(p => {
-    ctx.globalAlpha = p.life / p.maxLife;
-    ctx.fillStyle = p.color;
-    ctx.fillRect(px(p.x - camera), px(p.y), p.size, p.size);
-    p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.life--;
+  particles = particles.filter(p=>p.life>0);
+  particles.forEach(p=>{
+    ctx.globalAlpha=p.life/p.maxLife;
+    ctx.fillStyle=p.color;
+    ctx.fillRect(Math.round(sc(p.x)),Math.round(p.y),p.size,p.size);
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.2; p.life--;
   });
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha=1;
 }
 
-function spawnParticles(x, y, color, count = 12) {
-  for (let i = 0; i < count; i++) {
-    particles.push({
-      x, y, color,
-      vx: (Math.random() - 0.5) * 6,
-      vy: (Math.random() - 0.5) * 6 - 3,
-      size: 3 + Math.random() * 4,
-      life: 30 + Math.random() * 20,
-      maxLife: 50,
-    });
-  }
+function spawnParticles(x,y,color,n=12) {
+  for (let i=0;i<n;i++) particles.push({
+    x,y,color,vx:(Math.random()-0.5)*6,vy:(Math.random()-0.5)*6-3,
+    size:3+Math.random()*4,life:30+Math.random()*20,maxLife:50
+  });
 }
 
-function drawHeart(x, y, size, color) {
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, size, size);
-  ctx.fillRect(x + size, y - size, size, size);
-  ctx.fillRect(x - size, y - size, size, size);
-  ctx.fillRect(x - size, y, size, size);
-  ctx.fillRect(x + size, y, size, size);
-  ctx.fillRect(x - size * 0.5, y + size, size * 2, size);
-  ctx.fillRect(x, y + size * 1.5, size, size);
+function drawHeart(x,y,s,col) {
+  ctx.fillStyle=col;
+  [[0,0],[s,0],[-s,0],[0,s],[s,s],[-s,s],[0,s*2]].forEach(([dx,dy])=>ctx.fillRect(x+dx-s/2,y+dy,s,s));
+}
+
+function drawCallEffect() {
+  if (callEffectTimer<=0) return;
+  callEffectTimer--;
+  const alpha=Math.min(1,callEffectTimer/30);
+  ctx.save(); ctx.globalAlpha=alpha;
+  const cx=W/2, cy=H/2;
+  r(cx-65,cy-90,130,110,'#001a33');
+  ctx.strokeStyle='#60c0ff'; ctx.lineWidth=3;
+  ctx.strokeRect(cx-65,cy-90,130,110);
+  r(cx-15,cy-80,30,8,C.iHair); r(cx-18,cy-74,36,6,C.iHair);
+  r(cx-14,cy-68,28,22,C.skin);
+  r(cx-8,cy-62,6,6,C.iEyes); r(cx+2,cy-62,6,6,C.iEyes);
+  r(cx-8,cy-62,2,2,'#fff'); r(cx+2,cy-62,2,2,'#fff');
+  ctx.fillStyle='#60c0ff'; ctx.font='6px "Press Start 2P"'; ctx.textAlign='center';
+  ctx.fillText('ILIA ♥',cx,cy-14);
+  ctx.fillText('+100 ENERGIA!',cx,cy+2);
+  ctx.globalAlpha=1; ctx.restore(); ctx.textAlign='left';
 }
 
 // ── UPDATE ────────────────────────────────────────────
-const GRAVITY = 0.55;
-const JUMP_FORCE = -13;
-const SPEED = 3.5;
-
-let jumpPressed = false;
-let leftPressed = false;
-let rightPressed = false;
-let powerupPressed = false;
-
 function update() {
-  if (state !== 'playing') return;
+  if (state!=='playing') return;
+  if (shake>0) shake-=0.5;
+  if (powerupCooldown>0) powerupCooldown--;
+  if (player.invincible>0) player.invincible--;
 
-  // Player movement
-  player.vx = 0;
-  if (leftPressed) { player.vx = -SPEED; player.facing = -1; }
-  if (rightPressed) { player.vx = SPEED; player.facing = 1; }
+  // movement
+  player.vx=0;
+  if (leftPressed)  { player.vx=-SPEED; player.facing=-1; }
+  if (rightPressed) { player.vx= SPEED; player.facing= 1; }
+  player.vy+=GRAVITY;
+  player.x+=player.vx;
+  player.y+=player.vy;
 
-  // Gravity
-  player.vy += GRAVITY;
-  player.x += player.vx;
-  player.y += player.vy;
+  // ground
+  const gy=GROUND_Y();
+  if (player.y>=gy) { player.y=gy; player.vy=0; player.onGround=true; }
+  else player.onGround=false;
+  if (player.x<10) player.x=10;
 
-  // Ground collision
-  if (player.y >= GROUND_Y()) {
-    player.y = GROUND_Y();
-    player.vy = 0;
-    player.onGround = true;
-  } else {
-    player.onGround = false;
-  }
-
-  // Clamp left
-  if (player.x < 10) player.x = 10;
-
-  // Platform collision
-  obstacles.filter(o => o.type === 'platform' && o.active).forEach(plat => {
-    const px2 = player.x, py2 = player.y;
-    if (px2 + player.w > plat.x && px2 < plat.x + plat.w &&
-        py2 + player.h > plat.y && py2 + player.h < plat.y + plat.h + 12 &&
-        player.vy >= 0) {
-      player.y = plat.y - player.h;
-      player.vy = 0;
-      player.onGround = true;
+  // platforms
+  obstacles.filter(o=>o.type==='platform'&&o.active).forEach(pl=>{
+    if (player.x+player.w>pl.x && player.x<pl.x+pl.w &&
+        player.y>pl.y-pl.h && player.y-pl.h<pl.y && player.vy>=0) {
+      player.y=pl.y; player.vy=0; player.onGround=true;
     }
   });
 
-  // Jump
+  // jump
   if (jumpPressed && player.onGround) {
-    player.vy = JUMP_FORCE;
-    player.onGround = false;
-    jumpPressed = false;
+    player.vy=JUMP_FORCE; player.onGround=false; jumpPressed=false;
   }
 
-  // Animate
-  if (player.vx !== 0) {
+  // animate
+  if (player.vx!==0) {
     player.frameTimer++;
-    if (player.frameTimer > 8) { player.frame = (player.frame + 1) % 3; player.frameTimer = 0; }
-  } else {
-    player.frame = 0;
+    if (player.frameTimer>8) { player.frame=(player.frame+1)%3; player.frameTimer=0; }
+  } else player.frame=0;
+
+  // powerup
+  if (powerupPressed && powerups>0 && powerupCooldown===0) {
+    powerupPressed=false; powerups--; energy=100; powerupCooldown=120; shake=0;
+    callEffectTimer=120;
+    spawnParticles(player.x+14,player.y,  '#60c0ff',30);
   }
 
-  if (player.invincible > 0) player.invincible--;
-  if (powerupCooldown > 0) powerupCooldown--;
-  if (shake > 0) shake -= 0.5;
-
-  // Ilia wave animation
-  ilia.frameTimer++;
-  if (ilia.frameTimer > 20) { ilia.frame = (ilia.frame + 1) % 2; ilia.frameTimer = 0; }
-
-  // Camera follow
-  const targetCam = player.x - GW() * 0.3;
-  camera += (targetCam - camera) * 0.1;
-  camera = Math.max(0, Math.min(camera, LEVEL_WIDTH() - GW()));
-
-  // Obstacle collision
-  obstacles.forEach(ob => {
-    if (!ob.active || ob.type === 'platform') return;
-    const overlapX = player.x + player.w > ob.x && player.x < ob.x + ob.w;
-    const overlapY = player.y + player.h > ob.y && player.y < ob.y + ob.h;
-    if (overlapX && overlapY && player.invincible === 0) {
-      // concerto: must jump over, so only hurt if on ground level
-      if (ob.type === 'concerto' && player.y < ob.y - 10) {
-        // jumped over safely — do nothing but check clearance below
-      } else if (ob.type === 'concerto' && player.y + player.h < ob.y + 10 && player.vy > 0) {
-        // landing on top of crowd — bounce
-        player.vy = JUMP_FORCE * 0.6;
-        energy -= 5;
-        spawnParticles(player.x + 14, player.y, '#ff8844');
+  // obstacle collisions
+  obstacles.forEach(ob=>{
+    if (!ob.active||ob.type==='platform') return;
+    const ox=player.x+player.w>ob.x&&player.x<ob.x+ob.w;
+    const oy=player.y>ob.y-ob.h&&player.y<ob.y;
+    if (ox&&oy&&player.invincible===0) {
+      if (ob.type==='concerto'&&player.y-player.h<ob.y-ob.h+8&&player.vy>0) {
+        player.vy=JUMP_FORCE*0.6; energy-=5;
       } else {
-        energy -= ob.type === 'concerto' ? 8 : 15;
-        player.invincible = 60;
-        shake = 8;
-        spawnParticles(player.x + 14, player.y + 20, '#ff4444');
-        if (energy <= 0) { energy = 0; gameOver(); }
+        energy-=ob.type==='concerto'?8:15;
+        player.invincible=60; shake=8;
+        spawnParticles(player.x+14,player.y,'#ff4444');
+        if (energy<=0) { energy=0; gameOver(); }
       }
-      // mark cleared when passed through
     }
-    // Clear obstacle when passed
-    if (player.x > ob.x + ob.w + 10 && !ob.cleared) {
-      ob.cleared = true;
-      if (ob.type !== 'platform') {
-        obstaclesCleared++;
-        spawnParticles(ob.x + ob.w / 2, ob.y, '#ffe066', 20);
-      }
+    if (!ob.cleared&&player.x>ob.x+ob.w+10) {
+      ob.cleared=true;
+      spawnParticles(ob.x+ob.w/2,ob.y,'#ffe066',20);
     }
   });
 
-  // Power-up
-  if (powerupPressed && powerups > 0 && powerupCooldown === 0) {
-    powerupPressed = false;
-    powerups--;
-    energy = 100;
-    powerupCooldown = 120;
-    shake = 0;
-    spawnParticles(player.x + 14, player.y + 10, '#60c0ff', 30);
-    // show call effect
-    showCallEffect();
-  }
+  // camera
+  const targetCam=player.x-W*0.3;
+  camera+=(targetCam-camera)*0.1;
+  camera=Math.max(0,Math.min(camera,LEVEL_WIDTH()-W));
 
-  // Win condition
-  const dx = ilia.x - (player.x + player.w);
-  if (dx < 40 && !levelComplete) {
-    levelComplete = true;
-    setTimeout(() => {
-      document.getElementById('screenWin').classList.remove('hidden');
-      state = 'win';
-    }, 800);
+  // ilia wave
+  ilia.frameTimer++; if (ilia.frameTimer>20){ilia.frame=(ilia.frame+1)%2;ilia.frameTimer=0;}
+
+  // win
+  if (ilia.x-(player.x+player.w)<40&&!levelComplete) {
+    levelComplete=true;
+    setTimeout(()=>{ document.getElementById('screenWin').classList.remove('hidden'); state='win'; },800);
   }
 
   updateHUD();
 }
 
-let callEffectTimer = 0;
-function showCallEffect() {
-  callEffectTimer = 120;
-}
-
-function drawCallEffect() {
-  if (callEffectTimer <= 0) return;
-  callEffectTimer--;
-  const alpha = Math.min(1, callEffectTimer / 30);
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = '#001a33';
-  ctx.fillRect(GW() / 2 - 60, GH() / 2 - 80, 120, 100);
-  ctx.strokeStyle = '#60c0ff';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(GW() / 2 - 60, GH() / 2 - 80, 120, 100);
-  // Ilia pixel face in "video call"
-  ctx.fillStyle = '#f07ab0';
-  ctx.fillRect(GW() / 2 - 15, GH() / 2 - 70, 30, 8);
-  ctx.fillRect(GW() / 2 - 18, GH() / 2 - 64, 36, 6);
-  ctx.fillStyle = C.skin;
-  ctx.fillRect(GW() / 2 - 14, GH() / 2 - 58, 28, 22);
-  ctx.fillStyle = C.iEyes;
-  ctx.fillRect(GW() / 2 - 8, GH() / 2 - 52, 6, 6);
-  ctx.fillRect(GW() / 2 + 2, GH() / 2 - 52, 6, 6);
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(GW() / 2 - 8, GH() / 2 - 52, 2, 2);
-  ctx.fillRect(GW() / 2 + 2, GH() / 2 - 52, 2, 2);
-  ctx.fillStyle = '#60c0ff';
-  ctx.font = '6px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillText('ILIA ♥', GW() / 2, GH() / 2 - 10);
-  ctx.fillText('+100 ENERGIA!', GW() / 2, GH() / 2 + 4);
-  ctx.globalAlpha = 1;
-  ctx.restore();
-}
-
 function updateHUD() {
-  const bar = document.getElementById('energyBarInner');
-  bar.style.width = energy + '%';
-  bar.style.background = energy < 30 ? 'linear-gradient(90deg,#ffaa00,#ffcc44)' : 'linear-gradient(90deg,#e03030,#ff6644)';
-  document.getElementById('powerupCount').textContent = powerups;
-  document.getElementById('powerupInfo').style.opacity = powerups === 0 ? '0.3' : '1';
+  const bar=document.getElementById('energyBarInner');
+  bar.style.width=energy+'%';
+  bar.style.background=energy<30?'linear-gradient(90deg,#ffaa00,#ffcc44)':'linear-gradient(90deg,#e03030,#ff6644)';
+  document.getElementById('powerupCount').textContent=powerups;
 }
 
 function gameOver() {
-  state = 'gameover';
+  state='gameover';
   document.getElementById('screenGameOver').classList.remove('hidden');
 }
 
-// ── RENDER LOOP ───────────────────────────────────────
+// ── RENDER ────────────────────────────────────────────
 function render() {
-  ctx.clearRect(0, 0, GW(), GH());
+  ctx.clearRect(0,0,W,H);
   drawBackground();
-  // Draw goal distance indicator
-  if (state === 'playing') {
-    const dist = Math.max(0, Math.floor((ilia.x - player.x) / 10));
-    ctx.font = '6px "Press Start 2P"';
-    ctx.fillStyle = '#ffe066';
-    ctx.textAlign = 'right';
-    ctx.fillText('BERLINO ' + dist + 'm ▶', GW() - 12, 100);
-    ctx.textAlign = 'left';
-  }
-
-  // Draw obstacles
-  obstacles.forEach(drawObstacle);
-  drawParticles();
-
-  // Draw Ilia
-  if (state === 'playing' || state === 'win') {
-    drawIlia(ilia.x, ilia.y, ilia.frame);
-    // Heart above Ilia
-    const heartBeat = Math.sin(Date.now() / 400) * 2;
-    drawHeart(px(ilia.x + 11 - camera), px(ilia.y - 20 + heartBeat), 3, '#ff4488');
-  }
-
-  // Draw Carlo
-  if (state === 'playing') {
-    drawCarlo(player.x, player.y, player.facing, player.frame, player.invincible);
-  }
-
-  drawCallEffect();
-
-  // City label
-  if (state === 'playing') {
-    const progress = camera / (LEVEL_WIDTH() - GW());
-    ctx.font = '7px "Press Start 2P"';
-    ctx.textAlign = 'center';
-    if (progress < 0.4) {
-      ctx.fillStyle = '#8888aa';
-      ctx.fillText('MILANO', GW() / 2, 110);
-    } else if (progress > 0.6) {
-      ctx.fillStyle = '#88aa88';
-      ctx.fillText('BERLINO', GW() / 2, 110);
+  if (state==='playing'||state==='win') {
+    // distance indicator
+    if (state==='playing') {
+      const dist=Math.max(0,Math.floor((ilia.x-player.x)/10));
+      ctx.font='6px "Press Start 2P"'; ctx.fillStyle='#ffe066';
+      ctx.textAlign='right'; ctx.fillText('BERLINO '+dist+'m ▶',W-12,90); ctx.textAlign='left';
+      // city label
+      const prog=camera/(LEVEL_WIDTH()-W);
+      ctx.font='7px "Press Start 2P"'; ctx.textAlign='center';
+      ctx.fillStyle=prog<0.4?'#8888aa':'#88aa88';
+      ctx.fillText(prog<0.4?'MILANO':'BERLINO',W/2,105); ctx.textAlign='left';
     }
-    ctx.textAlign = 'left';
+    obstacles.forEach(drawObstacle);
+    drawParticles();
+    drawIlia();
+    const hb=Math.sin(Date.now()/400)*2;
+    drawHeart(Math.round(sc(ilia.x+11)),Math.round(ilia.y-ilia.h-20+hb),4,'#ff4488');
+    drawCarlo();
+    drawCallEffect();
   }
 }
 
-function loop() {
-  update();
-  render();
-  requestAnimationFrame(loop);
+function loop() { update(); render(); requestAnimationFrame(loop); }
+
+// ── CONTROLS ──────────────────────────────────────────
+function hold(el,down,up) {
+  el.addEventListener('touchstart',e=>{e.preventDefault();down();},{passive:false});
+  el.addEventListener('touchend',  e=>{e.preventDefault();up();  },{passive:false});
+  el.addEventListener('mousedown', down);
+  el.addEventListener('mouseup',   up);
 }
+hold(document.getElementById('btnLeft'),  ()=>leftPressed=true,  ()=>leftPressed=false);
+hold(document.getElementById('btnRight'), ()=>rightPressed=true, ()=>rightPressed=false);
+hold(document.getElementById('btnJump'),  ()=>jumpPressed=true,  ()=>{});
+hold(document.getElementById('btnPowerup'),()=>powerupPressed=true,()=>{});
 
-// ── INPUT ──────────────────────────────────────────────
-function setupControls() {
-  const btnLeft  = document.getElementById('btnLeft');
-  const btnRight = document.getElementById('btnRight');
-  const btnJump  = document.getElementById('btnJump');
-  const btnPow   = document.getElementById('btnPowerup');
+window.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft')  leftPressed=true;
+  if(e.key==='ArrowRight') rightPressed=true;
+  if(e.key===' '||e.key==='ArrowUp') jumpPressed=true;
+  if(e.key==='p'||e.key==='P') powerupPressed=true;
+});
+window.addEventListener('keyup',e=>{
+  if(e.key==='ArrowLeft')  leftPressed=false;
+  if(e.key==='ArrowRight') rightPressed=false;
+});
 
-  const hold = (el, onDown, onUp) => {
-    el.addEventListener('touchstart', e => { e.preventDefault(); onDown(); }, { passive: false });
-    el.addEventListener('touchend',   e => { e.preventDefault(); onUp();   }, { passive: false });
-    el.addEventListener('mousedown', onDown);
-    el.addEventListener('mouseup', onUp);
-  };
-
-  hold(btnLeft,  () => leftPressed = true,  () => leftPressed = false);
-  hold(btnRight, () => rightPressed = true, () => rightPressed = false);
-  hold(btnJump,  () => jumpPressed = true,  () => {});
-  hold(btnPow,   () => powerupPressed = true, () => {});
-
-  // Keyboard
-  window.addEventListener('keydown', e => {
-    if (e.key === 'ArrowLeft')  leftPressed = true;
-    if (e.key === 'ArrowRight') rightPressed = true;
-    if (e.key === ' ' || e.key === 'ArrowUp') jumpPressed = true;
-    if (e.key === 'p' || e.key === 'P') powerupPressed = true;
-  });
-  window.addEventListener('keyup', e => {
-    if (e.key === 'ArrowLeft')  leftPressed = false;
-    if (e.key === 'ArrowRight') rightPressed = false;
-  });
-}
-
-// ── SCREENS ────────────────────────────────────────────
-document.getElementById('btnStart').addEventListener('click', () => {
-  // Force canvas to fill window before initializing positions
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+// ── SCREENS ───────────────────────────────────────────
+document.getElementById('btnStart').addEventListener('click',()=>{
   document.getElementById('screenStart').classList.add('hidden');
-  initGame();
-  state = 'playing';
+  initGame(); state='playing';
 });
-document.getElementById('btnRetry').addEventListener('click', () => {
+document.getElementById('btnRetry').addEventListener('click',()=>{
   document.getElementById('screenGameOver').classList.add('hidden');
-  initGame();
-  state = 'playing';
+  initGame(); state='playing';
 });
-document.getElementById('btnNext').addEventListener('click', () => {
-  // placeholder for next level
-  document.getElementById('screenWin').innerHTML = `
+document.getElementById('btnNext').addEventListener('click',()=>{
+  document.getElementById('screenWin').innerHTML=`
     <h1>🎉<br/>COMING<br/>SOON!</h1>
     <h2>CUTSCENE &<br/>LIVELLO 2<br/>IN ARRIVO!</h2>
-    <p>Torna presto! ♥</p>
-  `;
+    <p>Torna presto! ♥</p>`;
 });
 
-setupControls();
 loop();
-
-// PWA Service Worker - disabled during development
-// if ('serviceWorker' in navigator) {
-//   navigator.serviceWorker.register('/game/sw.js').catch(() => {});
-// }
 </script>
 </body>
 </html>
