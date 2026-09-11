@@ -205,12 +205,6 @@ const ctx = canvas.getContext('2d');
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  // Re-snap player to ground if game is running
-  if (typeof player !== 'undefined' && player.y && state === 'playing') {
-    if (player.y < GROUND_Y() - 100 || player.y > GROUND_Y() + 10) {
-      player.y = GROUND_Y();
-    }
-  }
 }
 resize();
 window.addEventListener('resize', resize);
@@ -892,6 +886,9 @@ function setupControls() {
 
 // ── SCREENS ────────────────────────────────────────────
 document.getElementById('btnStart').addEventListener('click', () => {
+  // Force canvas to fill window before initializing positions
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
   document.getElementById('screenStart').classList.add('hidden');
   initGame();
   state = 'playing';
