@@ -910,10 +910,10 @@ document.getElementById('btnNext').addEventListener('click', () => {
 setupControls();
 loop();
 
-// PWA Service Worker
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/game/sw.js').catch(() => {});
-}
+// PWA Service Worker - disabled during development
+// if ('serviceWorker' in navigator) {
+//   navigator.serviceWorker.register('/game/sw.js').catch(() => {});
+// }
 </script>
 </body>
 </html>
