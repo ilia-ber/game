@@ -129,9 +129,11 @@ const C = {
 
 // ── STATE ─────────────────────────────────────────────
 let state = 'start';
-let energy, powerups, camera, obstacles, particles, bgElements;
-let levelComplete, powerupCooldown, shake, callEffectTimer;
-let player, ilia;
+let energy=100, powerups=3, camera=0;
+let obstacles=[], particles=[], bgElements=[];
+let levelComplete=false, powerupCooldown=0, shake=0, callEffectTimer=0;
+let player={x:0,y:0,w:28,h:48,vx:0,vy:0,onGround:false,frame:0,frameTimer:0,facing:1,invincible:0};
+let ilia={x:9999,y:0,w:22,h:38,frame:0,frameTimer:0};
 let leftPressed=false, rightPressed=false, jumpPressed=false, powerupPressed=false;
 
 const GRAVITY    = 0.55;
