@@ -25,17 +25,16 @@
       touch-action: none;
     }
     #gameWrapper {
-      position: relative;
+      position: fixed;
+      top: 0; left: 0;
       width: 100vw;
-      max-width: 480px;
       height: 100vh;
-      max-height: 100vh;
-      display: flex;
-      flex-direction: column;
     }
     #gameCanvas {
+      position: absolute;
+      top: 0; left: 0;
       width: 100%;
-      flex: 1;
+      height: 100%;
       image-rendering: pixelated;
       display: block;
     }
@@ -204,9 +203,14 @@ const ctx = canvas.getContext('2d');
 
 // Responsive canvas
 function resize() {
-  const wrapper = document.getElementById('gameWrapper');
-  canvas.width = wrapper.clientWidth;
-  canvas.height = wrapper.clientHeight;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  // Re-snap player to ground if game is running
+  if (typeof player !== 'undefined' && player.y && state === 'playing') {
+    if (player.y < GROUND_Y() - 100 || player.y > GROUND_Y() + 10) {
+      player.y = GROUND_Y();
+    }
+  }
 }
 resize();
 window.addEventListener('resize', resize);
