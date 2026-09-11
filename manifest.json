@@ -1,0 +1,19 @@
+{
+  "name": "Carlo's Quest",
+  "short_name": "CarloQuest",
+  "description": "Un gioco d'amore in pixel art",
+  "start_url": "/game/",
+  "scope": "/game/",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
