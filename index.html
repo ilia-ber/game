@@ -7,6 +7,8 @@
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <title>CARLO'S QUEST</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
   <link rel="manifest" href="manifest.json"/>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
   <style>
@@ -199,6 +201,7 @@ function drawBackground() {
   ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
 
   const gy = GROUND_Y();
+  if (!bgElements || !Array.isArray(bgElements)) return;
   bgElements.forEach(el => {
     const sx = el.x - camera*0.4;
     if (sx < -300 || sx > W+300) return;
