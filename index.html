@@ -188,6 +188,8 @@ function generateBg() {
     bgElements.push({type:'building',x:lw*0.55+i*300+Math.random()*80,h,w:55+Math.random()*50,color:'#1a1e1a',winColor:'#80d0ff'});
   }
   bgElements.push({type:'tvtower',x:lw-300});
+  // Torre vicino a Ilia (goal)
+  bgElements.push({type:'tvtower_goal',x:lw-180});
   for (let i=0;i<4;i++) bgElements.push({type:'graffitiwall',x:lw*0.5+i*200,y:GROUND_Y()-80});
 }
 
@@ -227,6 +229,39 @@ function drawBackground() {
       ctx.beginPath(); ctx.arc(Math.round(sx),gy-180,22,0,Math.PI*2); ctx.fill();
       ctx.fillStyle='#80d0ff';
       ctx.fillRect(Math.round(sx-2),gy-300,4,40);
+    } else if (el.type==='tvtower_goal') {
+      // Torre di Alexanderplatz grande vicino a Ilia
+      const tx = Math.round(sx);
+      const pulse = Math.sin(Date.now()/600)*0.5+0.5;
+      // base e tronco
+      ctx.fillStyle='#223322';
+      ctx.fillRect(tx-6, gy-340, 12, 340);
+      // parte rastremata in basso
+      ctx.fillStyle='#1a2a1a';
+      ctx.fillRect(tx-12, gy-120, 24, 120);
+      ctx.fillRect(tx-8,  gy-200, 16, 80);
+      // sfera iconica
+      ctx.fillStyle='#2a4a2a';
+      ctx.beginPath(); ctx.arc(tx, gy-230, 32, 0, Math.PI*2); ctx.fill();
+      // finestre della sfera
+      ctx.fillStyle='#80d0ff';
+      [[-14,-8],[-8,-16],[0,-20],[10,-16],[16,-8],[14,2],[6,10],[-6,10],[-14,2]].forEach(([wx,wy])=>{
+        ctx.fillRect(tx+wx-2, gy-230+wy-2, 5, 5);
+      });
+      // anello decorativo sfera
+      ctx.strokeStyle='#3a6a3a'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(tx, gy-230, 34, 0, Math.PI*2); ctx.stroke();
+      // antenna con luce lampeggiante
+      ctx.fillStyle='#1a3a1a';
+      ctx.fillRect(tx-3, gy-400, 6, 70);
+      ctx.fillStyle = pulse > 0.5 ? '#ff4444' : '#880000';
+      ctx.beginPath(); ctx.arc(tx, gy-402, 5, 0, Math.PI*2); ctx.fill();
+      // riflessi luce sulla torre
+      ctx.fillStyle=`rgba(128,208,255,${0.15+pulse*0.1})`;
+      ctx.fillRect(tx-6, gy-340, 3, 340);
+      // label
+      ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#80d0ff';
+      ctx.textAlign='center'; ctx.fillText('BERLIN', tx, gy-370); ctx.textAlign='left';
     } else if (el.type==='graffitiwall') {
       r(sx,el.y,180,80,'#1a1e18');
       ['#ff4488','#44ffaa','#ffcc00','#44aaff'].forEach((c,ci)=>{
@@ -360,8 +395,8 @@ function drawObstacle(ob) {
     drawBook(bookPhase);
     drawBook(bookPhase2);
 
-    ctx.font='5px "Press Start 2P"'; ctx.fillStyle='#ff4444';
-    ctx.fillText('PROF!', 2,-16+walk);
+    ctx.font='9px "Press Start 2P"'; ctx.fillStyle='#ff4444';
+    ctx.fillText('PROF!', -2,-22+walk);
 
   } else if (ob.type==='pattumiera') {
     // ── SACCHETTO ROTOLANTE ──
@@ -377,8 +412,8 @@ function drawObstacle(ob) {
     // X occhi minacciosi
     p(8,12,4,4,'#88ff44'); p(20,12,4,4,'#88ff44');
     ctx.restore();
-    ctx.font='5px "Press Start 2P"'; ctx.fillStyle='#88ff44';
-    ctx.fillText('SPAZ!',0,-10);
+    ctx.font='9px "Press Start 2P"'; ctx.fillStyle='#88ff44';
+    ctx.fillText('SPAZ!',-4,-14);
 
   } else if (ob.type==='concerto') {
     // ── PALCO ANNI 80 nello sfondo ──
@@ -450,8 +485,8 @@ function drawObstacle(ob) {
       p(z.x+4, -2+j,  8,14,'#223322');
       p(z.x+14,-2+j+sway,8,14,'#223322');
     });
-    ctx.font='5px "Press Start 2P"'; ctx.fillStyle='#ff00ff';
-    ctx.fillText('ZOMBIE!',30,-148);
+    ctx.font='9px "Press Start 2P"'; ctx.fillStyle='#ff00ff';
+    ctx.fillText('ZOMBIE!',20,-158);
   }
   ctx.restore();
 }
@@ -634,13 +669,13 @@ function render() {
     // distance indicator
     if (state==='playing') {
       const dist=Math.max(0,Math.floor((ilia.x-player.x)/10));
-      ctx.font='6px "Press Start 2P"'; ctx.fillStyle='#ffe066';
-      ctx.textAlign='right'; ctx.fillText('BERLINO '+dist+'m ▶',W-12,90); ctx.textAlign='left';
+      ctx.font='10px "Press Start 2P"'; ctx.fillStyle='#ffe066';
+      ctx.textAlign='right'; ctx.fillText('BERLINO '+dist+'m ▶',W-12,95); ctx.textAlign='left';
       // city label
       const prog=camera/(LEVEL_WIDTH()-W);
-      ctx.font='7px "Press Start 2P"'; ctx.textAlign='center';
-      ctx.fillStyle=prog<0.4?'#8888aa':'#88aa88';
-      ctx.fillText(prog<0.4?'MILANO':'BERLINO',W/2,105); ctx.textAlign='left';
+      ctx.font='11px "Press Start 2P"'; ctx.textAlign='center';
+      ctx.fillStyle=prog<0.4?'#aaaacc':'#aaccaa';
+      ctx.fillText(prog<0.4?'★ MILANO ★':'★ BERLINO ★',W/2,112); ctx.textAlign='left';
     }
     obstacles.forEach(drawObstacle);
     drawParticles();
