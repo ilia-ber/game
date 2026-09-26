@@ -307,40 +307,151 @@ function drawIlia() {
 function drawObstacle(ob) {
   if (!ob.active) return;
   const sx = Math.round(sc(ob.x));
-  if (sx < -250 || sx > W+250) return;
+  if (sx < -350 || sx > W+350) return;
   const sy = Math.round(ob.y - ob.h);
   if (ob.type==='platform') {
     r(sx,sy,ob.w,ob.h,'#4a3a1a'); r(sx,sy,ob.w,3,'#6a5a2a'); return;
   }
   ctx.save(); ctx.translate(sx,sy);
   const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
+  const t = Date.now();
+
   if (ob.type==='corso') {
-    const b=Math.sin(Date.now()/300)*3;
-    p(8,-2+b,20,4,'#8b6914'); p(4,-6+b,28,6,'#8b6914');
-    p(8,2+b,20,18,'#2a4a8a'); p(4,4+b,6,14,'#2a4a8a'); p(26,4+b,6,14,'#2a4a8a');
-    p(10,2+b,16,6,'#fcd5a0');
-    p(12,4+b,4,4,'#2a2a6a'); p(19,4+b,4,4,'#2a2a6a');
-    p(26,10+b,10,14,'#c8a830'); p(27,11+b,8,12,'#f0e8c0');
-    p(8,20+b,8,14,'#1a3a6a'); p(20,20+b,8,14,'#1a3a6a');
-    ctx.font='5px "Press Start 2P"'; ctx.fillStyle='#ffe066';
-    ctx.fillText('CORSO!',-4,-18+b);
+    // ── PROFESSORE che lancia libri ──
+    const walk = Math.sin(t/300)*3;
+    const armUp = Math.sin(t/400); // braccio che lancia
+
+    // hitbox debug: r(0,0,ob.w,ob.h,'rgba(255,0,0,0.2)');
+
+    // CORPO professore
+    p(6, 2+walk, 24,4,'#5a3a10');   // tocco mortarboard
+    p(2,-2+walk, 32,6,'#5a3a10');   // tesa mortarboard
+    p(8, 6+walk, 20,18,'#1a3a7a');  // giacca
+    p(2, 8+walk,  6,14,'#1a3a7a');  // braccio sx
+    p(4, 6+walk, 28,6,'#fcd5a0');   // colletto/faccia
+    p(8, 2+walk, 20,8,'#fcd5a0');   // faccia
+    // occhi arrabbiati
+    p(10,4+walk,5,4,'#cc2200'); p(19,4+walk,5,4,'#cc2200');
+    p(10,3+walk,6,2,'#333');    p(19,3+walk,6,2,'#333'); // sopracciglia
+    // bocca urla
+    p(12,9+walk,8,3,'#cc2200');
+    // gambe che camminano
+    const legL = Math.sin(t/200)*6;
+    p(8, 24+walk, 8,14+legL,'#0a1a4a');
+    p(18,24+walk, 8,14-legL,'#0a1a4a');
+
+    // BRACCIO DX che lancia - animato
+    const throwAngle = Math.sin(t/350);
+    const armX = 28 + throwAngle*8;
+    const armY = 8 + walk - throwAngle*6;
+    p(armX, armY, 6,12,'#1a3a7a');  // braccio
+    p(armX+1, armY+12, 5,4,'#fcd5a0'); // mano
+
+    // LIBRI LANCIATI (volano verso sinistra)
+    const bookPhase = (t/800) % 1;
+    const bookPhase2 = ((t/800)+0.5) % 1;
+    const drawBook = (phase) => {
+      const bx = -phase*80;
+      const by = -10 + Math.sin(phase*Math.PI)*-20;
+      p(bx, by, 14,10,'#c8a830');
+      p(bx+1,by+1,12,8,'#f0e8c0');
+      p(bx+6,by+1,2,8,'#c8a830');
+    };
+    drawBook(bookPhase);
+    drawBook(bookPhase2);
+
+    ctx.font='5px "Press Start 2P"'; ctx.fillStyle='#ff4444';
+    ctx.fillText('PROF!', 2,-16+walk);
+
   } else if (ob.type==='pattumiera') {
-    p(4,4,28,30,'#2a4a2a'); p(0,20,8,14,'#2a4a2a'); p(14,0,8,6,'#1a3a1a');
-    p(6,6,6,6,'#3a6a3a'); p(22,10,5,5,'#3a6a3a');
-    ctx.font='5px "Press Start 2P"'; ctx.fillStyle='#ffe066';
+    // ── SACCHETTO ROTOLANTE ──
+    const roll = (t/180) % (Math.PI*2);
+    ctx.save();
+    ctx.translate(18, 28);
+    ctx.rotate(roll * 0.4);
+    ctx.translate(-18,-28);
+    p(4,4,28,32,'#2a4a2a');
+    p(0,22,8,14,'#2a4a2a');
+    p(14,0,8,6,'#1a3a1a');
+    p(6,8,6,6,'#3a6a3a'); p(22,12,5,5,'#3a6a3a');
+    // X occhi minacciosi
+    p(8,12,4,4,'#88ff44'); p(20,12,4,4,'#88ff44');
+    ctx.restore();
+    ctx.font='5px "Press Start 2P"'; ctx.fillStyle='#88ff44';
     ctx.fillText('SPAZ!',0,-10);
+
   } else if (ob.type==='concerto') {
-    [{x:0,col:'#d42020',hair:'#f5c518'},{x:40,col:'#204ad4',hair:'#cc4488'},
-     {x:80,col:'#20a020',hair:'#aaa'},{x:120,col:'#8020c0',hair:'#ffaa00'}]
-    .forEach(per=>{
-      const j=Math.sin(Date.now()/250+per.x)*8;
-      p(per.x+6,-24+j,14,6,per.hair); p(per.x+4,-18+j,18,16,per.col);
-      p(per.x+2,-20+j,4,14,per.col); p(per.x+20,-20+j,4,14,per.col);
-      p(per.x+6,-30+j,14,8,C.skin);
-      p(per.x+4,-2+j,8,14,'#222'); p(per.x+14,-2+j,8,14,'#222');
+    // ── PALCO ANNI 80 nello sfondo ──
+    const stageX = -30;
+    const stageY = -120;
+    // palco
+    p(stageX, stageY+80, 220, 40, '#2a1a0a');
+    p(stageX, stageY+75, 220, 8,  '#4a3a1a');
+    // tenda palco
+    p(stageX,   stageY,     10, 80, '#8a0020');
+    p(stageX+210,stageY,    10, 80, '#8a0020');
+    p(stageX,   stageY,    220, 12, '#8a0020');
+    // luci fluo anni 80 lampeggianti
+    const lights = [
+      {x:20, col:['#ff00ff','#00ffff','#ffff00']},
+      {x:60, col:['#00ffff','#ffff00','#ff00ff']},
+      {x:100,col:['#ffff00','#ff00ff','#00ffff']},
+      {x:140,col:['#ff00ff','#00ffff','#ffff00']},
+      {x:180,col:['#00ffff','#ffff00','#ff00ff']},
+    ];
+    lights.forEach(l=>{
+      const li = Math.floor(t/200)%3;
+      // fascio di luce
+      ctx.fillStyle=l.col[li]+'44';
+      ctx.beginPath();
+      ctx.moveTo(stageX+l.x+5, stageY+12);
+      ctx.lineTo(stageX+l.x-20, stageY+75);
+      ctx.lineTo(stageX+l.x+30, stageY+75);
+      ctx.closePath(); ctx.fill();
+      // lampada
+      p(stageX+l.x,stageY+8,10,8,l.col[li]);
     });
-    ctx.font='5px "Press Start 2P"'; ctx.fillStyle='#ffe066';
-    ctx.fillText('CONCERTO!',10,-48);
+    // stella sul palco
+    ctx.font='10px serif'; ctx.textAlign='center';
+    ctx.fillText('🎸', stageX+110, stageY+72);
+    ctx.textAlign='left';
+
+    // ── ZOMBIE che ballano ──
+    const zombies = [
+      {x:0,  skin:'#7aaa6a', hair:'#334433', shirt:'#3a5a3a'},
+      {x:42, skin:'#8aaa7a', hair:'#223322', shirt:'#2a3a2a'},
+      {x:84, skin:'#7a9a6a', hair:'#445544', shirt:'#4a6a4a'},
+      {x:126,skin:'#6a9a5a', hair:'#334433', shirt:'#3a5a3a'},
+    ];
+    zombies.forEach(z=>{
+      const j = Math.sin(t/300+z.x)*6;
+      const sway = Math.sin(t/500+z.x)*4;
+      // braccia alzate da zombie
+      p(z.x-4, -28+j, 6,18, z.shirt);  // braccio sx alzato
+      p(z.x+20, -28+j+sway, 6,18, z.shirt); // braccio dx alzato
+      p(z.x-4, -10+j, 5,4, z.skin);    // mano sx
+      p(z.x+20, -10+j+sway,5,4,z.skin);// mano dx
+      // corpo
+      p(z.x+2, -18+j, 18,20, z.shirt);
+      // testa
+      p(z.x+4, -34+j, 14,18, z.skin);
+      // capelli scompigliati
+      p(z.x+2, -38+j, 18,6, z.hair);
+      p(z.x,   -36+j, 4,4,  z.hair);
+      p(z.x+18,-36+j, 4,4,  z.hair);
+      // occhi zombie (X)
+      p(z.x+6, -30+j, 4,3,'#ff2200');
+      p(z.x+12,-30+j, 4,3,'#ff2200');
+      p(z.x+7, -29+j, 2,5,'#ff2200');
+      p(z.x+13,-29+j, 2,5,'#ff2200');
+      // bocca aperta
+      p(z.x+6, -24+j, 8,4,'#331100');
+      // gambe
+      p(z.x+4, -2+j,  8,14,'#223322');
+      p(z.x+14,-2+j+sway,8,14,'#223322');
+    });
+    ctx.font='5px "Press Start 2P"'; ctx.fillStyle='#ff00ff';
+    ctx.fillText('ZOMBIE!',30,-148);
   }
   ctx.restore();
 }
@@ -416,10 +527,11 @@ function update() {
     }
   });
 
-  // jump
+  // jump - non interferisce col movimento orizzontale
   if (jumpPressed && player.onGround) {
-    player.vy=JUMP_FORCE; player.onGround=false; jumpPressed=false;
+    player.vy=JUMP_FORCE; player.onGround=false;
   }
+  if (!player.onGround) jumpPressed=false;
 
   // animate
   if (player.vx!==0) {
@@ -435,23 +547,53 @@ function update() {
   }
 
   // obstacle collisions
+  // Coordinate: player.y = bottom del player, player.y-player.h = top del player
+  // ob.y = bottom dell'ostacolo, ob.y-ob.h = top dell'ostacolo
   obstacles.forEach(ob=>{
     if (!ob.active||ob.type==='platform') return;
-    const ox=player.x+player.w>ob.x&&player.x<ob.x+ob.w;
-    const oy=player.y>ob.y-ob.h&&player.y<ob.y;
-    if (ox&&oy&&player.invincible===0) {
-      if (ob.type==='concerto'&&player.y-player.h<ob.y-ob.h+8&&player.vy>0) {
-        player.vy=JUMP_FORCE*0.6; energy-=5;
+
+    const pLeft  = player.x;
+    const pRight = player.x + player.w;
+    const pTop   = player.y - player.h;
+    const pBot   = player.y;
+
+    const oLeft  = ob.x;
+    const oRight = ob.x + ob.w;
+    const oTop   = ob.y - ob.h;
+    const oBot   = ob.y;
+
+    const overlapX = pRight > oLeft+4 && pLeft < oRight-4;
+    const overlapY = pBot > oTop+4 && pTop < oBot-4;
+
+    if (overlapX && overlapY && player.invincible===0) {
+      // stomping dall'alto: Carlo salta sul nemico
+      const stomping = player.vy > 0 && pBot < oTop + 20;
+      if (ob.type==='corso' && stomping) {
+        // sconfigge il professore saltandoci sopra
+        ob.active = false;
+        player.vy = JUMP_FORCE * 0.7;
+        spawnParticles(ob.x+ob.w/2, ob.y-ob.h/2, '#ffe066', 25);
+      } else if (ob.type==='concerto' && stomping) {
+        // rimbalza sulla folla
+        player.vy = JUMP_FORCE * 0.5;
+        energy -= 5;
+        player.invincible = 30;
+        spawnParticles(player.x+14, pBot, '#ff8844', 10);
+        if (energy<=0) { energy=0; gameOver(); }
       } else {
-        energy-=ob.type==='concerto'?8:15;
-        player.invincible=60; shake=8;
-        spawnParticles(player.x+14,player.y,'#ff4444');
+        // colpito di lato
+        energy -= ob.type==='concerto' ? 10 : 20;
+        player.invincible = 80;
+        shake = 8;
+        spawnParticles(player.x+14, player.y-player.h/2, '#ff4444', 15);
         if (energy<=0) { energy=0; gameOver(); }
       }
     }
-    if (!ob.cleared&&player.x>ob.x+ob.w+10) {
+
+    // superato l'ostacolo
+    if (!ob.cleared && player.x > ob.x+ob.w+10) {
       ob.cleared=true;
-      spawnParticles(ob.x+ob.w/2,ob.y,'#ffe066',20);
+      spawnParticles(ob.x+ob.w/2, ob.y-ob.h/2, '#ffe066', 20);
     }
   });
 
