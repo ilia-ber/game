@@ -811,28 +811,39 @@ function startCutscene() {
 
 const DIALOGS = [
   { who:'ILIA',  text:'Sei arrivato da me,\nmio prode Carlo!' },
-  { who:'ILIA',  text:'Adesso posso evolvermi\nalla mia forma finale...' },
+  { who:'ILIA',  text:'Adesso posso assumere\nla mia forma finale...' },
   { who:'ILIA',  text:'Sai cosa dobbiamo\nfare adesso?' },
   { who:'CARLO', text:'.....' },
   { who:'ILIA',  text:'Trovare un\nnido adatto!' },
 ];
 let dialogStep = 0;
+// Fasi:
+// 0: zoom in (auto)
+// 1: dialog "Sei arrivato..." → TAP
+// 2: dialog "Adesso posso assumere..." → TAP
+// 3: PUFF trasformazione (auto ~2s)
+// 4: Carlo cuori (auto ~1.5s)
+// 5: dialog "Sai cosa dobbiamo fare?" → TAP
+// 6: dialog "....." → TAP
+// 7: dialog "Trovare un nido!" → TAP
+// 8: zoom out (auto)
 
 function updateCutscene() {
   cutscene.timer++;
   const t = cutscene.timer;
 
   if (cutscene.phase === 0) {
-    // Zoom in on characters
     cutscene.zoomScale += (2.2 - cutscene.zoomScale) * 0.04;
-    if (t > 80) { cutscene.phase = 1; cutscene.timer = 0; dialogStep = 0; }
+    if (t > 80) { cutscene.phase = 1; cutscene.timer = 0; }
   }
   else if (cutscene.phase === 1) {
-    // Dialog 1: "Sei arrivato da me"
-    if (t > 180) { cutscene.phase = 2; cutscene.timer = 0; }
+    // Attende TAP — nessun avanzamento automatico
   }
   else if (cutscene.phase === 2) {
-    // PUFF - hair transform
+    // Attende TAP
+  }
+  else if (cutscene.phase === 3) {
+    // PUFF automatico
     if (t === 1) {
       for (let i=0;i<40;i++) cutscene.puffParticles.push({
         x: ilia.x+11, y: ilia.y-30,
@@ -843,27 +854,17 @@ function updateCutscene() {
     }
     cutscene.puffParticles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.1;p.life--;});
     cutscene.puffParticles = cutscene.puffParticles.filter(p=>p.life>0);
-    if (t > 40) cutscene.iliaHairBrown = true;
-    if (t > 90) { cutscene.phase = 3; cutscene.timer = 0; }
-  }
-  else if (cutscene.phase === 3) {
-    // Dialog 2: evoluzione capelli
-    if (t > 160) { cutscene.phase = 4; cutscene.timer = 0; }
+    if (t > 30) cutscene.iliaHairBrown = true;
+    if (t > 100) { cutscene.phase = 4; cutscene.timer = 0; }
   }
   else if (cutscene.phase === 4) {
-    // Carlo cuoricini agli occhi
-    if (t > 120) { cutscene.phase = 5; cutscene.timer = 0; }
+    // Carlo cuori automatico
+    if (t > 90) { cutscene.phase = 5; cutscene.timer = 0; }
   }
-  else if (cutscene.phase === 5) {
-    // "Sai cosa dobbiamo fare?"
-    if (t > 160) { cutscene.phase = 6; cutscene.timer = 0; }
-  }
-  else if (cutscene.phase === 6) {
-    // "....." + "Trovare un nido!"
-    if (t > 220) { cutscene.phase = 7; cutscene.timer = 0; }
-  }
-  else if (cutscene.phase === 7) {
-    // Zoom out
+  else if (cutscene.phase === 5) { /* TAP */ }
+  else if (cutscene.phase === 6) { /* TAP */ }
+  else if (cutscene.phase === 7) { /* TAP */ }
+  else if (cutscene.phase === 8) {
     cutscene.zoomScale += (1 - cutscene.zoomScale) * 0.05;
     if (t > 80) { endCutsceneStartLevel2(); }
   }
@@ -895,7 +896,7 @@ function drawCutscene() {
   ctx.restore();
 
   // Carlo cuori agli occhi (phase 4)
-  if (cutscene.phase >= 4 && cutscene.phase < 7) {
+  if (cutscene.phase >= 4 && cutscene.phase < 8) {
     const px2 = W/2 - 30;
     const py2 = H/2 + 10;
     ctx.fillStyle = '#ff4488';
@@ -909,11 +910,10 @@ function drawCutscene() {
   // Dialog box
   let dlg = null;
   if (cutscene.phase === 1) dlg = DIALOGS[0];
-  else if (cutscene.phase === 2 && cutscene.timer > 50) dlg = DIALOGS[1];
-  else if (cutscene.phase === 3) dlg = DIALOGS[1];
+  else if (cutscene.phase === 2) dlg = DIALOGS[1];
   else if (cutscene.phase === 5) dlg = DIALOGS[2];
-  else if (cutscene.phase === 6 && cutscene.timer < 110) dlg = DIALOGS[3];
-  else if (cutscene.phase === 6 && cutscene.timer >= 110) dlg = DIALOGS[4];
+  else if (cutscene.phase === 6) dlg = DIALOGS[3];
+  else if (cutscene.phase === 7) dlg = DIALOGS[4];
 
   if (dlg) {
     const bx=20, by=60, bw=W-40, bh=120;
@@ -937,11 +937,13 @@ function drawCutscene() {
 // Tap to advance cutscene dialogs
 canvas.addEventListener('click', ()=>{
   if (state !== 'cutscene') return;
-  if (cutscene.phase===1 && cutscene.timer>30) { cutscene.phase=2; cutscene.timer=0; }
-  else if (cutscene.phase===3 && cutscene.timer>30) { cutscene.phase=4; cutscene.timer=0; }
-  else if (cutscene.phase===5 && cutscene.timer>30) { cutscene.phase=6; cutscene.timer=0; }
-  else if (cutscene.phase===6 && cutscene.timer>30 && cutscene.timer<110) { cutscene.timer=110; }
-  else if (cutscene.phase===6 && cutscene.timer>=110) { cutscene.phase=7; cutscene.timer=0; }
+  const p = cutscene.phase;
+  // Solo le fasi TAP avanzano al tocco (min 20 frame per evitare doppi tap)
+  if (p === 1 && cutscene.timer > 20) { cutscene.phase=2; cutscene.timer=0; }
+  else if (p === 2 && cutscene.timer > 20) { cutscene.phase=3; cutscene.timer=0; }
+  else if (p === 5 && cutscene.timer > 20) { cutscene.phase=6; cutscene.timer=0; }
+  else if (p === 6 && cutscene.timer > 20) { cutscene.phase=7; cutscene.timer=0; }
+  else if (p === 7 && cutscene.timer > 20) { cutscene.phase=8; cutscene.timer=0; }
 });
 
 function endCutsceneStartLevel2() {
@@ -1273,18 +1275,11 @@ function drawHouse1(sx, gy) {
   ctx.beginPath(); ctx.moveTo(sx+98,gy-210); ctx.lineTo(sx+122,gy-210); ctx.stroke();
   ctx.beginPath(); ctx.arc(sx+110,gy-210,6,0,Math.PI*2); ctx.stroke();
 
-  // DARK INTERIOR overlay quando dentro
+  // SCAPPA warning lampeggiante quando dentro casa
   if (insideHouse) {
-    ctx.fillStyle='rgba(0,0,0,0.75)';
-    ctx.fillRect(sx,gy-HH,HW,HH);
-    // luce fioca dalla porta
-    const grad=ctx.createRadialGradient(sx+110,gy-20,5,sx+110,gy-20,100);
-    grad.addColorStop(0,'rgba(255,180,60,0.2)'); grad.addColorStop(1,'transparent');
-    ctx.fillStyle=grad; ctx.fillRect(sx,gy-HH,HW,HH);
-    // SCAPPA in rosso lampeggiante
     if (Math.floor(Date.now()/400)%2===0) {
       ctx.font='10px "Press Start 2P"'; ctx.fillStyle='#ff2222';
-      ctx.textAlign='center'; ctx.fillText('⚠ SCAPPA! ⚠',sx+110,gy-240); ctx.textAlign='left';
+      ctx.textAlign='center'; ctx.fillText('⚠ SCAPPA! ⚠',sx+110,gy-245); ctx.textAlign='left';
     }
   }
 }
