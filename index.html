@@ -75,7 +75,7 @@
     <div class="ctrlBtn" id="btnRight">▶</div>
   </div>
   <div class="btnGroup">
-    <div class="ctrlBtn" id="btnPowerup">📱<span>CHIAMA</span></div>
+    <div class="ctrlBtn" id="btnPowerup"><span id="powerupEmoji">📱</span><span id="healLabel">CHIAMA</span></div>
     <div class="ctrlBtn" id="btnJump">▲</div>
   </div>
 </div>
@@ -95,6 +95,11 @@
   <h1>❤️<br/>BERLINO!</h1>
   <h2>CARLO HA<br/>RAGGIUNTO<br/>ILIA!</h2>
   <button class="startBtn" id="btnNext" style="background:#2d7a27">CONTINUA ▶</button>
+</div>
+<div class="overlay hidden" id="screenL2Win">
+  <h1>🏠<br/>TROVATA!</h1>
+  <h2>AVETE TROVATO<br/>IL VOSTRO NIDO!</h2>
+  <p>Coming soon... ♥</p>
 </div>
 
 <script>
@@ -137,6 +142,29 @@ let levelComplete=false, powerupCooldown=0, shake=0, callEffectTimer=0;
 let player={x:0,y:0,w:28,h:48,vx:0,vy:0,onGround:false,frame:0,frameTimer:0,facing:1,invincible:0};
 let ilia={x:9999,y:0,w:22,h:38,frame:0,frameTimer:0};
 let leftPressed=false, rightPressed=false, jumpPressed=false, powerupPressed=false;
+
+// ── CUTSCENE STATE ────────────────────────────────────
+let cutscene = {
+  active: false,
+  phase: 0,      // 0=zoom-in, 1=dialog1, 2=puff, 3=dialog2, 4=carlo-hearts, 5=dialog3, 6=dialog4, 7=zoomout
+  timer: 0,
+  zoomScale: 1,
+  zoomX: 0,
+  dialogIdx: 0,
+  puffParticles: [],
+  iliaHairBrown: false,
+};
+
+// ── LEVEL 2 STATE ─────────────────────────────────────
+let level = 1;
+let iliaFollows = false;   // level 2: Ilia follows Carlo
+let iliaHealCooldown = 0;
+let healEffect = 0;
+let levelTitle = '';
+let levelTitleTimer = 0;
+let snake = null;          // snake enemy in house 1
+let housePhase = 0;        // which house (0=approaching, 1=inside, 2=fleeing)
+let insideHouse = false;
 
 const GRAVITY    = 0.55;
 const JUMP_FORCE = -13;
@@ -278,7 +306,7 @@ function drawBackground() {
   for (let tx=(-camera%32);tx<W;tx+=32) ctx.fillRect(Math.round(tx),gy,1,8);
 }
 
-function drawCarlo() {
+function drawCarlo(heartEyes=false) {
   if (player.invincible>0 && Math.floor(player.invincible/4)%2===0) return;
   ctx.save();
   const sx = Math.round(sc(player.x));
@@ -310,13 +338,22 @@ function drawCarlo() {
   // eyes
   p(7,player.h-44,5,5,C.eyes); p(16,player.h-44,5,5,C.eyes);
   p(8,player.h-43,3,3,C.eyeD); p(17,player.h-43,3,3,C.eyeD);
-  p(8,player.h-43,2,2,'#fff'); p(17,player.h-43,2,2,'#fff');
+  if (!heartEyes) {
+    p(8,player.h-43,2,2,'#fff'); p(17,player.h-43,2,2,'#fff');
+  } else {
+    ctx.font='9px serif';
+    ctx.fillText('♥', 6, player.h-40);
+    ctx.fillText('♥', 15, player.h-40);
+  }
   // mouth
   p(10,player.h-38,8,2,'#c05030');
   ctx.restore();
 }
 
 function drawIlia() {
+  drawIliaHair(ilia.hairBrown || false);
+}
+function drawIlia_orig() {
   const sx = Math.round(sc(ilia.x));
   const sy = Math.round(ilia.y - ilia.h);
   ctx.save(); ctx.translate(sx,sy);
@@ -535,7 +572,10 @@ function drawCallEffect() {
 
 // ── UPDATE ────────────────────────────────────────────
 function update() {
+  if (state==='cutscene') { updateCutscene(); return; }
+  if (state==='win2') return;
   if (state!=='playing') return;
+  if (level===2) { updateLevel2(); return; }
   if (shake>0) shake-=0.5;
   if (powerupCooldown>0) powerupCooldown--;
   if (player.invincible>0) player.invincible--;
@@ -653,7 +693,13 @@ function updateHUD() {
   const bar=document.getElementById('energyBarInner');
   bar.style.width=energy+'%';
   bar.style.background=energy<30?'linear-gradient(90deg,#ffaa00,#ffcc44)':'linear-gradient(90deg,#e03030,#ff6644)';
-  document.getElementById('powerupCount').textContent=powerups;
+  if (level===1) {
+    const pc = document.getElementById('powerupInfo');
+    if (pc) pc.innerHTML='📱 x<span id="powerupCount">'+powerups+'</span>';
+  } else {
+    const pc = document.getElementById('powerupInfo');
+    if (pc) pc.innerHTML = iliaHealCooldown>0 ? '💋 ricarica...' : '💋 BACIO';
+  }
 }
 
 function gameOver() {
@@ -664,6 +710,18 @@ function gameOver() {
 // ── RENDER ────────────────────────────────────────────
 function render() {
   ctx.clearRect(0,0,W,H);
+  if (state==='cutscene') { drawCutscene(); return; }
+  if (level===2) {
+    drawLevel2Background();
+    drawObstacle(obstacles.find(o=>o.type==='door')||{active:false});
+    drawParticles();
+    drawSnake();
+    drawIliaHair(true);
+    drawHealEffect();
+    drawCarlo(false);
+    drawLevelTitle();
+    return;
+  }
   drawBackground();
   if (state==='playing'||state==='win') {
     // distance indicator
@@ -699,7 +757,7 @@ function hold(el,down,up) {
 hold(document.getElementById('btnLeft'),  ()=>leftPressed=true,  ()=>leftPressed=false);
 hold(document.getElementById('btnRight'), ()=>rightPressed=true, ()=>rightPressed=false);
 hold(document.getElementById('btnJump'),  ()=>jumpPressed=true,  ()=>{});
-hold(document.getElementById('btnPowerup'),()=>powerupPressed=true,()=>{});
+hold(document.getElementById('btnPowerup'),()=>powerupPressed=true,()=>powerupPressed=false);
 
 window.addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft')  leftPressed=true;
@@ -722,11 +780,523 @@ document.getElementById('btnRetry').addEventListener('click',()=>{
   initGame(); state='playing';
 });
 document.getElementById('btnNext').addEventListener('click',()=>{
-  document.getElementById('screenWin').innerHTML=`
-    <h1>🎉<br/>COMING<br/>SOON!</h1>
-    <h2>CUTSCENE &<br/>LIVELLO 2<br/>IN ARRIVO!</h2>
-    <p>Torna presto! ♥</p>`;
+  document.getElementById('screenWin').classList.add('hidden');
+  startCutscene();
 });
+
+
+// ═══════════════════════════════════════════════════════
+// CUTSCENE
+// ═══════════════════════════════════════════════════════
+function startCutscene() {
+  state = 'cutscene';
+  cutscene.active = true;
+  cutscene.phase = 0;
+  cutscene.timer = 0;
+  cutscene.zoomScale = 1;
+  cutscene.iliaHairBrown = false;
+  // Position characters for cutscene
+  player.x = ilia.x - 60;
+  player.y = GROUND_Y();
+  player.facing = 1;
+  camera = Math.max(0, player.x - W*0.4);
+}
+
+const DIALOGS = [
+  { who:'ILIA',  text:'Sei arrivato da me,\nmio prode Carlo!' },
+  { who:'ILIA',  text:'Adesso posso evolvermi\nalla mia forma finale...' },
+  { who:'ILIA',  text:'Sai cosa dobbiamo\nfare adesso?' },
+  { who:'CARLO', text:'.....' },
+  { who:'ILIA',  text:'Trovare un\nnido adatto!' },
+];
+let dialogStep = 0;
+
+function updateCutscene() {
+  cutscene.timer++;
+  const t = cutscene.timer;
+
+  if (cutscene.phase === 0) {
+    // Zoom in on characters
+    cutscene.zoomScale += (2.2 - cutscene.zoomScale) * 0.04;
+    if (t > 80) { cutscene.phase = 1; cutscene.timer = 0; dialogStep = 0; }
+  }
+  else if (cutscene.phase === 1) {
+    // Dialog 1: "Sei arrivato da me"
+    if (t > 180) { cutscene.phase = 2; cutscene.timer = 0; }
+  }
+  else if (cutscene.phase === 2) {
+    // PUFF - hair transform
+    if (t === 1) {
+      for (let i=0;i<40;i++) cutscene.puffParticles.push({
+        x: ilia.x+11, y: ilia.y-30,
+        vx:(Math.random()-0.5)*5, vy:(Math.random()-0.5)*5-2,
+        life:60, maxLife:60, size:4+Math.random()*6,
+        color:['#f07ab0','#fff','#ffe0f0','#ffaacc'][Math.floor(Math.random()*4)]
+      });
+    }
+    cutscene.puffParticles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.1;p.life--;});
+    cutscene.puffParticles = cutscene.puffParticles.filter(p=>p.life>0);
+    if (t > 40) cutscene.iliaHairBrown = true;
+    if (t > 90) { cutscene.phase = 3; cutscene.timer = 0; }
+  }
+  else if (cutscene.phase === 3) {
+    // Dialog 2: evoluzione capelli
+    if (t > 160) { cutscene.phase = 4; cutscene.timer = 0; }
+  }
+  else if (cutscene.phase === 4) {
+    // Carlo cuoricini agli occhi
+    if (t > 120) { cutscene.phase = 5; cutscene.timer = 0; }
+  }
+  else if (cutscene.phase === 5) {
+    // "Sai cosa dobbiamo fare?"
+    if (t > 160) { cutscene.phase = 6; cutscene.timer = 0; }
+  }
+  else if (cutscene.phase === 6) {
+    // "....." + "Trovare un nido!"
+    if (t > 220) { cutscene.phase = 7; cutscene.timer = 0; }
+  }
+  else if (cutscene.phase === 7) {
+    // Zoom out
+    cutscene.zoomScale += (1 - cutscene.zoomScale) * 0.05;
+    if (t > 80) { endCutsceneStartLevel2(); }
+  }
+}
+
+function drawCutscene() {
+  // Draw world underneath zoomed
+  ctx.save();
+  const zs = cutscene.zoomScale;
+  const cx = (ilia.x + player.x)/2 - camera;
+  const cy = GROUND_Y() - 40;
+  ctx.translate(W/2, H/2);
+  ctx.scale(zs, zs);
+  ctx.translate(-cx, -cy);
+
+  drawBackground();
+  obstacles.forEach(drawObstacle);
+  // draw Ilia with brown/pink hair based on phase
+  drawIliaHair(cutscene.iliaHairBrown);
+  drawCarlo(false);
+
+  // puff particles
+  cutscene.puffParticles.forEach(p=>{
+    ctx.globalAlpha = p.life/p.maxLife;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(Math.round(p.x-camera), Math.round(p.y), p.size, p.size);
+  });
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // Carlo cuori agli occhi (phase 4)
+  if (cutscene.phase >= 4 && cutscene.phase < 7) {
+    const px2 = W/2 - 30;
+    const py2 = H/2 + 10;
+    ctx.fillStyle = '#ff4488';
+    ctx.font = '16px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('♥', px2-8, py2);
+    ctx.fillText('♥', px2+8, py2);
+    ctx.textAlign = 'left';
+  }
+
+  // Dialog box
+  let dlg = null;
+  if (cutscene.phase === 1) dlg = DIALOGS[0];
+  else if (cutscene.phase === 2 && cutscene.timer > 50) dlg = DIALOGS[1];
+  else if (cutscene.phase === 3) dlg = DIALOGS[1];
+  else if (cutscene.phase === 5) dlg = DIALOGS[2];
+  else if (cutscene.phase === 6 && cutscene.timer < 110) dlg = DIALOGS[3];
+  else if (cutscene.phase === 6 && cutscene.timer >= 110) dlg = DIALOGS[4];
+
+  if (dlg) {
+    const bx=20, by=H-130, bw=W-40, bh=110;
+    ctx.fillStyle='rgba(0,0,10,0.92)'; ctx.fillRect(bx,by,bw,bh);
+    ctx.strokeStyle='#ffe066'; ctx.lineWidth=2; ctx.strokeRect(bx,by,bw,bh);
+    ctx.font='8px "Press Start 2P"';
+    ctx.fillStyle='#ffe066'; ctx.fillText(dlg.who+':',bx+12,by+22);
+    ctx.fillStyle='#fff';
+    dlg.text.split('\n').forEach((line,i)=>{
+      ctx.fillText(line, bx+12, by+44+i*22);
+    });
+    // tap to continue hint
+    if (cutscene.timer % 40 < 20) {
+      ctx.font='6px "Press Start 2P"'; ctx.fillStyle='#888';
+      ctx.textAlign='right'; ctx.fillText('tocca per continuare ▶', bx+bw-10, by+bh-10);
+      ctx.textAlign='left';
+    }
+  }
+}
+
+// Tap to advance cutscene dialogs
+canvas.addEventListener('click', ()=>{
+  if (state !== 'cutscene') return;
+  if (cutscene.phase===1 && cutscene.timer>30) { cutscene.phase=2; cutscene.timer=0; }
+  else if (cutscene.phase===3 && cutscene.timer>30) { cutscene.phase=4; cutscene.timer=0; }
+  else if (cutscene.phase===5 && cutscene.timer>30) { cutscene.phase=6; cutscene.timer=0; }
+  else if (cutscene.phase===6 && cutscene.timer>30 && cutscene.timer<110) { cutscene.timer=110; }
+  else if (cutscene.phase===6 && cutscene.timer>=110) { cutscene.phase=7; cutscene.timer=0; }
+});
+
+function endCutsceneStartLevel2() {
+  state = 'playing';
+  cutscene.active = false;
+  level = 2;
+  iliaFollows = true;
+  initLevel2();
+}
+
+// ═══════════════════════════════════════════════════════
+// LEVEL 2
+// ═══════════════════════════════════════════════════════
+function initLevel2() {
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W; canvas.height = H;
+  energy = 100; camera = 0;
+  obstacles = []; particles = []; bgElements = [];
+  levelComplete = false; shake = 0; powerupCooldown = 0;
+  iliaHealCooldown = 0; healEffect = 0;
+  housePhase = 0; insideHouse = false;
+  snake = null;
+
+  const gy = GROUND_Y();
+  player.x = 60; player.y = gy; player.vx=0; player.vy=0;
+  player.onGround=true; player.invincible=0; player.facing=1;
+
+  ilia.x = player.x - 50; ilia.y = gy;
+  ilia.hairBrown = true;
+
+  levelTitle = 'FINDING A NEST';
+  levelTitleTimer = 180;
+
+  generateLevel2Bg();
+  generateHouse1();
+
+  // Update heal button label
+  const el = document.getElementById('healLabel');
+  const em = document.getElementById('powerupEmoji');
+  if (el) el.textContent = 'BACIO';
+  if (em) em.textContent = '💋';
+  updateHUD();
+}
+
+function generateLevel2Bg() {
+  bgElements = [];
+  const lw = W * 5;
+  // Day sky - sun, clouds, birds
+  bgElements.push({type:'sun', x:lw*0.15, y:60});
+  for (let i=0;i<8;i++) bgElements.push({type:'cloud',x:100+i*600+Math.random()*200,y:40+Math.random()*80,w:80+Math.random()*60});
+  // Day buildings/houses (lighter palette)
+  for (let i=0;i<10;i++) {
+    const h=60+Math.random()*80;
+    bgElements.push({type:'daybuilding',x:80+i*420+Math.random()*60,h,w:50+Math.random()*30});
+  }
+  // Birds
+  for (let i=0;i<6;i++) bgElements.push({type:'bird',x:Math.random()*lw,y:60+Math.random()*80,phase:Math.random()*Math.PI*2});
+  // House 1 location
+  bgElements.push({type:'house1',x:W*1.5});
+}
+
+function generateHouse1() {
+  const hx = W*1.5;
+  const gy = GROUND_Y();
+  // Door (trigger zone)
+  obstacles.push({type:'door', x:hx+60, y:gy, w:30, h:60, active:true, cleared:false});
+  // Snake inside house
+  snake = {x:hx+200, y:gy, w:60, h:20, vx:-1.5, active:true, frame:0, frameTimer:0};
+}
+
+function updateLevel2() {
+  if (state!=='playing' || level!==2) return;
+
+  const gy = GROUND_Y();
+  const lw = W*5;
+  if (shake>0) shake-=0.5;
+  if (powerupCooldown>0) powerupCooldown--;
+  if (iliaHealCooldown>0) iliaHealCooldown--;
+  if (healEffect>0) healEffect--;
+  if (levelTitleTimer>0) levelTitleTimer--;
+
+  // ── Carlo movement ──
+  player.vx=0;
+  if (leftPressed)  {player.vx=-SPEED; player.facing=-1;}
+  if (rightPressed) {player.vx= SPEED; player.facing= 1;}
+  player.vy += GRAVITY;
+  player.x += player.vx; player.y += player.vy;
+  if (player.y>=gy) {player.y=gy; player.vy=0; player.onGround=true;}
+  else player.onGround=false;
+  if (player.x<10) player.x=10;
+  if (player.x>lw-20) player.x=lw-20;
+
+  if (jumpPressed && player.onGround) {player.vy=JUMP_FORCE; player.onGround=false;}
+  if (!player.onGround) jumpPressed=false;
+
+  if (player.vx!==0) {
+    player.frameTimer++;
+    if (player.frameTimer>8) {player.frame=(player.frame+1)%3; player.frameTimer=0;}
+  } else player.frame=0;
+  if (player.invincible>0) player.invincible--;
+
+  // ── Ilia follows Carlo ──
+  const targetIliaX = player.x - 55;
+  ilia.x += (targetIliaX - ilia.x) * 0.08;
+  ilia.y = gy;
+
+  // ── Heal powerup ──
+  if (powerupPressed && iliaHealCooldown===0 && energy<100) {
+    powerupPressed = false;
+    energy = Math.min(100, energy+40);
+    iliaHealCooldown = 180;
+    healEffect = 90;
+    spawnParticles(ilia.x+11, ilia.y-30, '#ff88aa', 20);
+  }
+  powerupPressed = false;
+
+  // ── Camera ──
+  const targetCam = player.x - W*0.35;
+  camera += (targetCam-camera)*0.1;
+  camera = Math.max(0, Math.min(camera, lw-W));
+
+  // ── Snake ──
+  if (snake && snake.active) {
+    snake.x += snake.vx;
+    snake.frameTimer++; if(snake.frameTimer>12){snake.frame=(snake.frame+1)%4;snake.frameTimer=0;}
+    // Reverse at walls
+    const hx = W*1.5;
+    if (snake.x < hx+10) snake.vx = Math.abs(snake.vx);
+    if (snake.x > hx+350) snake.vx = -Math.abs(snake.vx);
+
+    // Snake collision with Carlo
+    const pL=player.x, pR=player.x+player.w, pT=player.y-player.h, pB=player.y;
+    const sL=snake.x, sR=snake.x+snake.w, sT=snake.y-snake.h, sB=snake.y;
+    if (pR>sL && pL<sR && pB>sT+4 && pT<sB && player.invincible===0) {
+      energy -= 12;
+      player.invincible = 80; shake=6;
+      spawnParticles(player.x+14, player.y-20, '#88ff44', 12);
+      if (energy<=0) {energy=0; gameOver();}
+    }
+  }
+
+  // ── Door trigger (enter house) ──
+  const door = obstacles.find(o=>o.type==='door' && o.active);
+  if (door) {
+    if (player.x+player.w > door.x && player.x < door.x+door.w && !insideHouse) {
+      insideHouse = true;
+      housePhase = 1;
+      if (snake) snake.active = true;
+    }
+    // If player exits house to the left, win house 1
+    if (insideHouse && player.x < door.x - 10) {
+      insideHouse = false;
+      door.active = false;
+      if (snake) snake.active = false;
+      spawnParticles(player.x+14, player.y-20, '#ffe066', 30);
+      // Level complete placeholder
+      setTimeout(()=>{
+        document.getElementById('screenL2Win').classList.remove('hidden');
+        state='win2';
+      }, 600);
+    }
+  }
+
+  updateHUD();
+}
+
+// ── Draw Ilia with swappable hair color ──────────────────
+// Draw from bottom (y=0) upward, total height = 42px
+function drawIliaHair(brown) {
+  const sx = Math.round(sc(ilia.x));
+  const sy = Math.round(ilia.y); // bottom of sprite
+  ctx.save(); ctx.translate(sx, sy);
+  const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
+  const hair = brown ? '#8b5a2b' : C.iHair;
+  const hairH = brown ? '#c08840' : '#f8a0c8';
+  const wv = Math.floor(Date.now()/500)%2===0 ? -2 : 0; // wave arm
+
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fillRect(2,0,18,3);
+
+  // SHOES (y=0 is ground)
+  p(1,-5, 8,5,'#111'); p(11,-5, 8,5,'#111');
+
+  // PANTS
+  p(2,-18, 8,13,C.iPants); p(12,-18, 8,13,C.iPants);
+
+  // SHIRT body
+  p(1,-30, 20,13,C.iShirt);
+
+  // ARMS
+  p(-3,-29, 4,11,C.iShirt); p(-3,-19, 4,4,C.skin);   // left arm
+  p(20,-29+wv, 4,11,C.iShirt); p(20,-19+wv, 4,4,C.skin); // right arm (waves)
+
+  // NECK
+  p(7,-34, 7,5,C.skin);
+
+  // HEAD (face)
+  p(3,-44, 16,12,C.skin);
+  p(3,-33, 16,2,C.skinS); // chin shadow
+
+  // HAIR - long strands behind
+  p(-1,-34, 3,28,hair); // left strand
+  p(19,-34, 3,28,hair); // right strand
+  // top of hair
+  p(1,-46, 20,5,hair);
+  p(-1,-44, 24,5,hair);
+  p(2,-46, 4,10,hairH); // highlight
+
+  // EYES
+  p(6,-41, 5,5,C.iEyes); p(13,-41, 5,5,C.iEyes);
+  p(6,-41, 2,2,'#fff');  p(13,-41, 2,2,'#fff');
+
+  // EYELASHES
+  p(5,-42, 6,2,'#111'); p(12,-42, 6,2,'#111');
+
+  // MOUTH
+  p(8,-35, 7,2,'#c05848');
+
+  ctx.restore();
+}
+
+// ── Draw Level 2 background ───────────────────────────────
+function drawLevel2Background() {
+  // Light blue day sky
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#87ceeb'); grad.addColorStop(0.7,'#e0f4ff'); grad.addColorStop(1,'#c8e8a0');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+
+  const gy = GROUND_Y();
+  bgElements.forEach(el=>{
+    const sx = el.x - camera*0.4;
+    if (sx < -300 || sx > W+300) return;
+    if (el.type==='sun') {
+      ctx.fillStyle='#ffe566';
+      ctx.beginPath(); ctx.arc(sx,el.y,28,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#ffd700';
+      for(let a=0;a<8;a++){
+        const ax=sx+Math.cos(a*Math.PI/4)*36, ay=el.y+Math.sin(a*Math.PI/4)*36;
+        ctx.fillRect(ax-3,ay-3,6,6);
+      }
+    } else if (el.type==='cloud') {
+      ctx.fillStyle='rgba(255,255,255,0.9)';
+      [0,el.w*0.3,el.w*0.6].forEach((ox,i)=>{
+        const r=[18,24,18][i];
+        ctx.beginPath(); ctx.arc(sx+ox,el.y,r,0,Math.PI*2); ctx.fill();
+      });
+      ctx.fillRect(sx, el.y, el.w*0.9, 18);
+    } else if (el.type==='daybuilding') {
+      ctx.fillStyle='#c8b89a';
+      ctx.fillRect(Math.round(sx),gy-el.h,el.w,el.h);
+      ctx.fillStyle='#a89870';
+      ctx.fillRect(Math.round(sx),gy-el.h,el.w,4);
+      // windows
+      ctx.fillStyle='#7ab8e8';
+      for(let wy=gy-el.h+10;wy<gy-10;wy+=20)
+        for(let wx=sx+6;wx<sx+el.w-6;wx+=16)
+          ctx.fillRect(wx,wy,8,10);
+    } else if (el.type==='bird') {
+      const bx = (el.x - camera*0.3 + Date.now()*0.05) % (W*1.5);
+      const by = el.y + Math.sin(Date.now()/600+el.phase)*8;
+      const wing = Math.sin(Date.now()/200+el.phase)*4;
+      ctx.fillStyle='#333';
+      ctx.beginPath();
+      ctx.moveTo(bx,by); ctx.quadraticCurveTo(bx-8,by-wing,bx-16,by);
+      ctx.moveTo(bx,by); ctx.quadraticCurveTo(bx+8,by-wing,bx+16,by);
+      ctx.stroke();
+    } else if (el.type==='house1') {
+      drawHouse1(sx, gy);
+    }
+  });
+
+  // Green ground
+  ctx.fillStyle='#5a8a30'; ctx.fillRect(0,gy,W,8);
+  ctx.fillStyle='#3a6a18'; ctx.fillRect(0,gy+8,W,H-gy);
+  // ground details
+  ctx.fillStyle='#4a7a20';
+  for(let tx=(-camera%40);tx<W;tx+=40) ctx.fillRect(Math.round(tx),gy,2,8);
+}
+
+function drawHouse1(sx, gy) {
+  // Exterior
+  ctx.fillStyle='#7a6a5a'; ctx.fillRect(sx,gy-100,200,100); // walls
+  ctx.fillStyle='#5a4a3a'; // roof
+  ctx.beginPath(); ctx.moveTo(sx-10,gy-100); ctx.lineTo(sx+100,gy-150); ctx.lineTo(sx+210,gy-100); ctx.closePath(); ctx.fill();
+  // broken windows
+  ctx.fillStyle='#1a1a1a'; ctx.fillRect(sx+20,gy-80,35,30);
+  ctx.fillStyle='#1a1a1a'; ctx.fillRect(sx+145,gy-80,35,30);
+  // crack lines on windows
+  ctx.strokeStyle='#555'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(sx+20,gy-80); ctx.lineTo(sx+55,gy-50); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx+145,gy-50); ctx.lineTo(sx+180,gy-80); ctx.stroke();
+  // door
+  ctx.fillStyle='#3a2a1a'; ctx.fillRect(sx+82,gy-60,36,60);
+  ctx.fillStyle='#5a3a1a'; ctx.fillRect(sx+88,gy-55,10,10); // doorknob area
+
+  // Dark interior overlay when inside
+  if (insideHouse) {
+    ctx.fillStyle='rgba(0,0,0,0.7)';
+    ctx.fillRect(sx,gy-100,200,100);
+    // dim light from door
+    const grad=ctx.createRadialGradient(sx+100,gy-30,5,sx+100,gy-30,80);
+    grad.addColorStop(0,'rgba(255,200,100,0.15)'); grad.addColorStop(1,'transparent');
+    ctx.fillStyle=grad; ctx.fillRect(sx,gy-100,200,100);
+    // spooky label
+    ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ff4444';
+    ctx.textAlign='center'; ctx.fillText('SCAPPA!',sx+100,gy-110); ctx.textAlign='left';
+  }
+}
+
+function drawSnake() {
+  if (!snake || !snake.active) return;
+  const sx = Math.round(sc(snake.x));
+  const sy = Math.round(snake.y);
+  const t = Date.now();
+  const slither = Math.sin(t/200) * 4;
+  ctx.save(); ctx.translate(sx, sy);
+  const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
+  // body segments
+  p(0,-8+slither, 20,12,'#2a7a2a');
+  p(18,-6+slither*0.7,16,10,'#2a7a2a');
+  p(32,-10+slither*0.4,16,10,'#2a7a2a');
+  p(46,-8+slither*0.2,14,10,'#2a7a2a');
+  // scale pattern
+  p(4,-6+slither,6,4,'#3a9a3a'); p(12,-6+slither,6,4,'#3a9a3a');
+  // head
+  p(-8,-10+slither,18,14,'#1a6a1a');
+  // eyes
+  p(-4,-8+slither,4,4,'#ff4400'); p(2,-8+slither,4,4,'#ff4400');
+  p(-3,-7+slither,2,2,'#000'); p(3,-7+slither,2,2,'#000');
+  // tongue
+  if (Math.floor(t/300)%2===0) {
+    p(-14,-5+slither,6,2,'#ff2222');
+    p(-20,-7+slither,3,2,'#ff2222');
+    p(-20,-3+slither,3,2,'#ff2222');
+  }
+  ctx.restore();
+}
+
+function drawHealEffect() {
+  if (healEffect<=0) return;
+  const alpha = Math.min(1, healEffect/30);
+  // CHU text + heart near Ilia
+  const ex = Math.round(sc(ilia.x+11));
+  const ey = Math.round(ilia.y - ilia.h - 30 - (90-healEffect)*0.3);
+  ctx.save(); ctx.globalAlpha=alpha;
+  ctx.font='10px "Press Start 2P"'; ctx.fillStyle='#ff4488';
+  ctx.textAlign='center'; ctx.fillText('*CHU* ♥',ex,ey); ctx.textAlign='left';
+  ctx.restore();
+}
+
+function drawLevelTitle() {
+  if (levelTitleTimer<=0) return;
+  const alpha = Math.min(1, levelTitleTimer/30);
+  ctx.save(); ctx.globalAlpha=alpha;
+  ctx.font='14px "Press Start 2P"'; ctx.fillStyle='#ffe066';
+  ctx.textAlign='center';
+  ctx.fillText(levelTitle, W/2, H/2-20);
+  ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#aaa';
+  ctx.fillText('FINDING A NEST', W/2, H/2+10);
+  ctx.textAlign='left'; ctx.restore();
+}
+
 
 loop();
 </script>
