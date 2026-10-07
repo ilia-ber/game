@@ -37,8 +37,8 @@
       cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent;
     }
     .ctrlBtn:active { background:rgba(255,255,255,0.3); }
-    #btnPowerup { width:70px; height:70px; background:rgba(0,160,255,0.25); border-color:#60c0ff; font-size:26px; flex-direction:column; gap:1px; }
-    #btnPowerup span { font-size:5px; color:#a0e0ff; font-family:'Press Start 2P',monospace; }
+    #btnPowerup { width:80px; height:80px; background:rgba(0,160,255,0.25); border-color:#60c0ff; font-size:30px; flex-direction:column; gap:3px; }
+    #btnPowerup span { font-size:7px; color:#fff; font-family:'Press Start 2P',monospace; letter-spacing:-0.5px; }
     .overlay {
       position:fixed; inset:0; z-index:20;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -342,9 +342,14 @@ function drawCarlo(heartEyes=false) {
   if (!heartEyes) {
     p(8,player.h-43,2,2,'#fff'); p(17,player.h-43,2,2,'#fff');
   } else {
-    ctx.font='9px serif';
-    ctx.fillText('♥', 6, player.h-40);
-    ctx.fillText('♥', 15, player.h-40);
+    // draw pixel hearts directly over the eyes
+    const ey = player.h-46;
+    // left heart
+    p(7,ey+1,5,1,'#ff2266'); p(6,ey,3,1,'#ff2266'); p(10,ey,3,1,'#ff2266');
+    p(6,ey+1,7,1,'#ff2266'); p(7,ey+2,5,1,'#ff2266'); p(8,ey+3,3,1,'#ff2266'); p(9,ey+4,1,1,'#ff2266');
+    // right heart
+    p(16,ey+1,5,1,'#ff2266'); p(15,ey,3,1,'#ff2266'); p(19,ey,3,1,'#ff2266');
+    p(15,ey+1,7,1,'#ff2266'); p(16,ey+2,5,1,'#ff2266'); p(17,ey+3,3,1,'#ff2266'); p(18,ey+4,1,1,'#ff2266');
   }
   // mouth
   p(10,player.h-38,8,2,'#c05030');
@@ -1064,7 +1069,7 @@ function updateLevel2() {
     snake.frameTimer++; if(snake.frameTimer>12){snake.frame=(snake.frame+1)%4;snake.frameTimer=0;}
     // Reverse at walls
     if (snake.x < houseX+10) snake.vx = Math.abs(snake.vx);
-    if (snake.x > houseX+350) snake.vx = -Math.abs(snake.vx);
+    if (snake.x > houseX+200) snake.vx = -Math.abs(snake.vx);
 
     // Snake collision with Carlo
     const pL=player.x, pR=player.x+player.w, pT=player.y-player.h, pB=player.y;
@@ -1216,32 +1221,70 @@ function drawLevel2Background() {
 }
 
 function drawHouse1(sx, gy) {
-  // Exterior
-  ctx.fillStyle='#7a6a5a'; ctx.fillRect(sx,gy-100,200,100); // walls
-  ctx.fillStyle='#5a4a3a'; // roof
-  ctx.beginPath(); ctx.moveTo(sx-10,gy-100); ctx.lineTo(sx+100,gy-150); ctx.lineTo(sx+210,gy-100); ctx.closePath(); ctx.fill();
-  // broken windows
-  ctx.fillStyle='#1a1a1a'; ctx.fillRect(sx+20,gy-80,35,30);
-  ctx.fillStyle='#1a1a1a'; ctx.fillRect(sx+145,gy-80,35,30);
-  // crack lines on windows
-  ctx.strokeStyle='#555'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(sx+20,gy-80); ctx.lineTo(sx+55,gy-50); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(sx+145,gy-50); ctx.lineTo(sx+180,gy-80); ctx.stroke();
-  // door
-  ctx.fillStyle='#3a2a1a'; ctx.fillRect(sx+82,gy-60,36,60);
-  ctx.fillStyle='#5a3a1a'; ctx.fillRect(sx+88,gy-55,10,10); // doorknob area
+  // ── Casa a 3 piani ──
+  const HH = 220; // altezza totale casa
+  const HW = 220; // larghezza casa
 
-  // Dark interior overlay when inside
+  // PIANO 1 (terra)
+  ctx.fillStyle='#6a5a4a'; ctx.fillRect(sx, gy-80, HW, 80);
+  // PIANO 2
+  ctx.fillStyle='#7a6a5a'; ctx.fillRect(sx+10, gy-160, HW-20, 80);
+  // PIANO 3
+  ctx.fillStyle='#8a7a6a'; ctx.fillRect(sx+20, gy-230, HW-40, 70);
+  // TETTO spiovente
+  ctx.fillStyle='#4a3a2a';
+  ctx.beginPath(); ctx.moveTo(sx+10,gy-230); ctx.lineTo(sx+110,gy-275); ctx.lineTo(sx+210,gy-230); ctx.closePath(); ctx.fill();
+  // comignolo
+  ctx.fillStyle='#3a2a1a'; ctx.fillRect(sx+80,gy-290,20,30);
+  ctx.fillRect(sx+76,gy-295,28,8);
+
+  // divisori piani
+  ctx.fillStyle='#3a2a1a'; ctx.lineWidth=2;
+  ctx.fillRect(sx, gy-82, HW, 4);
+  ctx.fillRect(sx+10, gy-163, HW-20, 4);
+
+  // FINESTRE PIANO 1 (rotte)
+  ctx.fillStyle='#0a0a0a'; ctx.fillRect(sx+15,gy-70,30,28); ctx.fillRect(sx+175,gy-70,30,28);
+  ctx.strokeStyle='#444'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(sx+15,gy-70); ctx.lineTo(sx+45,gy-42); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx+45,gy-70); ctx.lineTo(sx+15,gy-42); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx+175,gy-42); ctx.lineTo(sx+205,gy-70); ctx.stroke();
+
+  // PORTA
+  ctx.fillStyle='#2a1a0a'; ctx.fillRect(sx+90,gy-68,40,68);
+  ctx.fillStyle='#4a2a0a'; ctx.fillRect(sx+96,gy-62,12,12); // pannello
+  ctx.fillStyle='#8a6a1a'; ctx.fillRect(sx+124,gy-40,5,5);  // maniglia
+
+  // FINESTRE PIANO 2
+  ctx.fillStyle='#0a0808'; ctx.fillRect(sx+25,gy-150,28,24); ctx.fillRect(sx+167,gy-150,28,24);
+  ctx.fillStyle='#1a1010'; ctx.fillRect(sx+90,gy-150,40,24); // finestra centrale piano 2
+  // crepe sul muro
+  ctx.strokeStyle='#3a2a1a'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(sx+60,gy-100); ctx.lineTo(sx+70,gy-130); ctx.lineTo(sx+65,gy-160); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx+150,gy-120); ctx.lineTo(sx+155,gy-145); ctx.stroke();
+
+  // FINESTRE PIANO 3
+  ctx.fillStyle='#0a0808'; ctx.fillRect(sx+40,gy-220,25,20); ctx.fillRect(sx+155,gy-220,25,20);
+  // finestra centrale piano3 con ragnatela
+  ctx.fillStyle='#0a0808'; ctx.fillRect(sx+98,gy-220,24,20);
+  ctx.strokeStyle='#555'; ctx.lineWidth=0.5;
+  ctx.beginPath(); ctx.moveTo(sx+110,gy-220); ctx.lineTo(sx+110,gy-200); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx+98,gy-210); ctx.lineTo(sx+122,gy-210); ctx.stroke();
+  ctx.beginPath(); ctx.arc(sx+110,gy-210,6,0,Math.PI*2); ctx.stroke();
+
+  // DARK INTERIOR overlay quando dentro
   if (insideHouse) {
-    ctx.fillStyle='rgba(0,0,0,0.7)';
-    ctx.fillRect(sx,gy-100,200,100);
-    // dim light from door
-    const grad=ctx.createRadialGradient(sx+100,gy-30,5,sx+100,gy-30,80);
-    grad.addColorStop(0,'rgba(255,200,100,0.15)'); grad.addColorStop(1,'transparent');
-    ctx.fillStyle=grad; ctx.fillRect(sx,gy-100,200,100);
-    // spooky label
-    ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ff4444';
-    ctx.textAlign='center'; ctx.fillText('SCAPPA!',sx+100,gy-110); ctx.textAlign='left';
+    ctx.fillStyle='rgba(0,0,0,0.75)';
+    ctx.fillRect(sx,gy-HH,HW,HH);
+    // luce fioca dalla porta
+    const grad=ctx.createRadialGradient(sx+110,gy-20,5,sx+110,gy-20,100);
+    grad.addColorStop(0,'rgba(255,180,60,0.2)'); grad.addColorStop(1,'transparent');
+    ctx.fillStyle=grad; ctx.fillRect(sx,gy-HH,HW,HH);
+    // SCAPPA in rosso lampeggiante
+    if (Math.floor(Date.now()/400)%2===0) {
+      ctx.font='10px "Press Start 2P"'; ctx.fillStyle='#ff2222';
+      ctx.textAlign='center'; ctx.fillText('⚠ SCAPPA! ⚠',sx+110,gy-240); ctx.textAlign='left';
+    }
   }
 }
 
