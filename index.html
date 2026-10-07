@@ -97,6 +97,11 @@
   <h2>CARLO HA<br/>RAGGIUNTO<br/>ILIA!</h2>
   <button class="startBtn" id="btnNext" style="background:#2d7a27">CONTINUA ▶</button>
 </div>
+<div class="hidden" id="cultChoice" style="display:none;" style="position:fixed;bottom:160px;left:0;right:0;display:flex;justify-content:center;gap:12px;z-index:30;padding:0 20px;">
+  <button onclick="handleCultChoice()" style="font-family:'Press Start 2P',monospace;font-size:9px;background:#c0c0c0;color:#333;border:3px solid #888;padding:12px 16px;border-radius:4px;cursor:pointer;">NO</button>
+  <button onclick="handleCultChoice()" style="font-family:'Press Start 2P',monospace;font-size:9px;background:#c0c0c0;color:#333;border:3px solid #888;padding:12px 16px;border-radius:4px;cursor:pointer;">HELL NO</button>
+  <button onclick="handleCultChoice()" style="font-family:'Press Start 2P',monospace;font-size:9px;background:#c0c0c0;color:#333;border:3px solid #888;padding:12px 16px;border-radius:4px;cursor:pointer;">MA SUCA</button>
+</div>
 <div class="overlay hidden" id="screenL2Win">
   <h1>🏠<br/>TROVATA!</h1>
   <h2>AVETE TROVATO<br/>IL VOSTRO NIDO!</h2>
@@ -166,7 +171,17 @@ let levelTitleTimer = 0;
 let snake = null;
 let housePhase = 0;
 let insideHouse = false;
-let houseX = 0;  // posizione globale della casa 1
+let houseX = 0;
+// Casa 2 - Culto
+let house2X = 0;
+let guruState = 'idle';   // idle | dialog | zoom | angry | defeated
+let guruTimer = 0;
+let guruDialogStep = 0;
+let guruBalls = [];       // palle di luce sparate dal guru
+let showCultChoice = false;
+let cultChoiceSelected = false;
+let insideTemple = false;
+let templeExitX = 0;
 
 const GRAVITY    = 0.55;
 const JUMP_FORCE = -13;
@@ -191,6 +206,87 @@ function initGame() {
 
   generateLevel();
   generateBg();
+  // ── Casa 2: Tempio del Culto ──
+  const templeDoor = obstacles.find(o=>o.type==='temple_door' && o.active);
+  const guruTrigger = obstacles.find(o=>o.type==='guru_trigger' && o.active);
+  const templeExit = obstacles.find(o=>o.type==='temple_exit' && o.active);
+
+  // Entra nel tempio
+  if (templeDoor && player.x+player.w > templeDoor.x+10 && !insideTemple) {
+    insideTemple = true;
+  }
+
+  // Trigger guru dialog
+  if (insideTemple && guruTrigger && player.x+player.w > guruTrigger.x && guruState==='idle') {
+    guruState = 'dialog';
+    guruTimer = 0;
+    guruDialogStep = 0;
+    showCultChoice = false;
+  }
+
+  // Guru state machine
+  if (guruState === 'dialog' || guruState === 'zoom') {
+    guruTimer++;
+    // showCultChoice viene triggerato dai pulsanti HTML
+  }
+
+  if (guruState === 'angry') {
+    guruTimer++;
+    // Spara palle ogni 60 frame
+    if (guruTimer % 60 === 0 && guruBalls.length < 8) {
+      const gx = house2X + W*1.2 + 30;
+      const gy2 = GROUND_Y() - 60;
+      const dx = player.x - gx;
+      const dy = (player.y - player.h/2) - gy2;
+      const dist = Math.sqrt(dx*dx+dy*dy);
+      guruBalls.push({
+        x: gx, y: gy2,
+        vx: (dx/dist)*4.5, vy: (dy/dist)*4.5,
+        life: 180, size: 10,
+        trail: []
+      });
+    }
+    // Aggiorna palle
+    guruBalls = guruBalls.filter(b=>b.life>0);
+    guruBalls.forEach(b=>{
+      b.trail.push({x:b.x, y:b.y});
+      if (b.trail.length>8) b.trail.shift();
+      // Homing leggero verso Carlo
+      const dx = player.x+14 - b.x;
+      const dy = (player.y-player.h/2) - b.y;
+      const dist = Math.sqrt(dx*dx+dy*dy)||1;
+      b.vx += (dx/dist)*0.15;
+      b.vy += (dy/dist)*0.15;
+      // Cap velocità
+      const spd = Math.sqrt(b.vx*b.vx+b.vy*b.vy);
+      if (spd>5) { b.vx=(b.vx/spd)*5; b.vy=(b.vy/spd)*5; }
+      b.x+=b.vx; b.y+=b.vy; b.life--;
+      // Rimbalza su pavimento
+      if (b.y > GROUND_Y()-b.size) { b.y=GROUND_Y()-b.size; b.vy*=-0.7; }
+      // Collisione Carlo
+      const pCx=player.x+14, pCy=player.y-player.h/2;
+      if (Math.sqrt((b.x-pCx)**2+(b.y-pCy)**2)<b.size+10 && player.invincible===0) {
+        energy-=15; player.invincible=80; shake=8;
+        b.life=0;
+        spawnParticles(player.x+14,player.y-20,'#ffffff',15);
+        if(energy<=0){energy=0;gameOver();}
+      }
+    });
+  }
+
+  // Uscita tempio → vittoria casa2
+  if (insideTemple && guruState==='angry' && templeExit && player.x > templeExit.x) {
+    guruState = 'defeated';
+    guruBalls = [];
+    insideTemple = false;
+    templeExit.active = false;
+    spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
+    setTimeout(()=>{
+      document.getElementById('screenL2Win').classList.remove('hidden');
+      state='win2';
+    }, 800);
+  }
+
   updateHUD();
 }
 
@@ -308,7 +404,7 @@ function drawBackground() {
   for (let tx=(-camera%32);tx<W;tx+=32) ctx.fillRect(Math.round(tx),gy,1,8);
 }
 
-function drawCarlo(heartEyes=false) {
+function drawCarlo() {
   if (player.invincible>0 && Math.floor(player.invincible/4)%2===0) return;
   ctx.save();
   const sx = Math.round(sc(player.x));
@@ -340,18 +436,7 @@ function drawCarlo(heartEyes=false) {
   // eyes
   p(7,player.h-44,5,5,C.eyes); p(16,player.h-44,5,5,C.eyes);
   p(8,player.h-43,3,3,C.eyeD); p(17,player.h-43,3,3,C.eyeD);
-  if (!heartEyes) {
-    p(8,player.h-43,2,2,'#fff'); p(17,player.h-43,2,2,'#fff');
-  } else {
-    // draw pixel hearts directly over the eyes
-    const ey = player.h-46;
-    // left heart
-    p(7,ey+1,5,1,'#ff2266'); p(6,ey,3,1,'#ff2266'); p(10,ey,3,1,'#ff2266');
-    p(6,ey+1,7,1,'#ff2266'); p(7,ey+2,5,1,'#ff2266'); p(8,ey+3,3,1,'#ff2266'); p(9,ey+4,1,1,'#ff2266');
-    // right heart
-    p(16,ey+1,5,1,'#ff2266'); p(15,ey,3,1,'#ff2266'); p(19,ey,3,1,'#ff2266');
-    p(15,ey+1,7,1,'#ff2266'); p(16,ey+2,5,1,'#ff2266'); p(17,ey+3,3,1,'#ff2266'); p(18,ey+4,1,1,'#ff2266');
-  }
+  p(8,player.h-43,2,2,'#fff'); p(17,player.h-43,2,2,'#fff');
   // mouth
   p(10,player.h-38,8,2,'#c05030');
   ctx.restore();
@@ -725,7 +810,7 @@ function render() {
     drawSnake();
     drawIliaHair(true);
     drawHealEffect();
-    drawCarlo(false);
+    drawCarlo();
     drawLevelTitle();
     return;
   }
@@ -817,6 +902,76 @@ const DIALOGS = [
   { who:'ILIA',  text:'Trovare un\nnido adatto!' },
 ];
 let dialogStep = 0;
+let heartBubbles = [];  // cuoricini bollicine intorno a Carlo
+
+function spawnHeartBubbles() {
+  heartBubbles = [];
+  const colors = ['#ff88bb','#ff44aa','#ffaad4','#ff66cc','#ffccee','#ee2299'];
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
+    const dist = 28 + Math.random() * 18;
+    heartBubbles.push({
+      // partono vicino alla testa di Carlo
+      ox: Math.cos(angle) * dist,  // offset x dall'origine
+      oy: Math.sin(angle) * dist,  // offset y dall'origine
+      phase: Math.random() * Math.PI * 2,  // fase ballonzolo
+      size: 5 + Math.random() * 6,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      speed: 0.3 + Math.random() * 0.4,
+      life: 1.0,
+      popped: false,
+      popTimer: 80 + Math.floor(Math.random() * 80),  // quando scoppia
+    });
+  }
+}
+
+function updateHeartBubbles(timer) {
+  heartBubbles.forEach(b => {
+    if (b.popped) return;
+    if (timer >= b.popTimer) {
+      b.popped = true;
+      b.life = 0;
+    }
+  });
+  // respawn se tutte scoppiate
+  if (heartBubbles.length > 0 && heartBubbles.every(b => b.popped)) {
+    spawnHeartBubbles();
+  }
+}
+
+function drawHeartBubbles() {
+  if (heartBubbles.length === 0) return;
+  const t = Date.now() / 1000;
+  // Centro testa di Carlo nel canvas (coordinata schermo)
+  const carloScreenX = Math.round(sc(player.x)) + 14;
+  const carloScreenY = Math.round(player.y - player.h) - 8;
+
+  heartBubbles.forEach(b => {
+    if (b.popped) return;
+    const bx = carloScreenX + b.ox + Math.sin(t * b.speed * 3 + b.phase) * 5;
+    const by = carloScreenY + b.oy + Math.cos(t * b.speed * 2 + b.phase) * 4;
+    const s = Math.round(b.size);
+
+    // Disegna cuoricino pixel (5x4 px scalato)
+    ctx.fillStyle = b.color;
+    // riga 1: due bumps
+    ctx.fillRect(bx-s+1, by-s, s-1, s-1);
+    ctx.fillRect(bx+1,   by-s, s-1, s-1);
+    // riga 2: largo
+    ctx.fillRect(bx-s,   by-1, s*2, s);
+    // riga 3: si stringe
+    ctx.fillRect(bx-s+1, by+s-1, s*2-2, s-1);
+    // riga 4: punta
+    ctx.fillRect(bx,     by+s*2-2, s, s-1);
+
+    // cerchietto trasparente (bolla)
+    ctx.strokeStyle = b.color + '88';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(bx, by, b.size + 3, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+}
 // Fasi:
 // 0: zoom in (auto)
 // 1: dialog "Sei arrivato..." → TAP
@@ -858,8 +1013,10 @@ function updateCutscene() {
     if (t > 100) { cutscene.phase = 4; cutscene.timer = 0; }
   }
   else if (cutscene.phase === 4) {
-    // Carlo cuori automatico
-    if (t > 90) { cutscene.phase = 5; cutscene.timer = 0; }
+    // Carlo cuori bollicine automatico
+    if (t === 1) spawnHeartBubbles();
+    updateHeartBubbles(t);
+    if (t > 100) { heartBubbles = []; cutscene.phase = 5; cutscene.timer = 0; }
   }
   else if (cutscene.phase === 5) { /* TAP */ }
   else if (cutscene.phase === 6) { /* TAP */ }
@@ -884,7 +1041,7 @@ function drawCutscene() {
   obstacles.forEach(drawObstacle);
   // draw Ilia with brown/pink hair based on phase
   drawIliaHair(cutscene.iliaHairBrown);
-  drawCarlo(false);
+  drawCarlo();
 
   // puff particles
   cutscene.puffParticles.forEach(p=>{
@@ -895,16 +1052,9 @@ function drawCutscene() {
   ctx.globalAlpha = 1;
   ctx.restore();
 
-  // Carlo cuori agli occhi (phase 4)
+  // Carlo bubble hearts (phase 4-7)
   if (cutscene.phase >= 4 && cutscene.phase < 8) {
-    const px2 = W/2 - 30;
-    const py2 = H/2 + 10;
-    ctx.fillStyle = '#ff4488';
-    ctx.font = '16px serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('♥', px2-8, py2);
-    ctx.fillText('♥', px2+8, py2);
-    ctx.textAlign = 'left';
+    drawHeartBubbles();
   }
 
   // Dialog box
@@ -933,6 +1083,22 @@ function drawCutscene() {
     }
   }
 }
+
+// Tap per guru dialog in livello 2
+canvas.addEventListener('click', ()=>{
+  if (state === 'playing' && level === 2) {
+    if (guruState === 'dialog') {
+      if (guruDialogStep < 1) {
+        guruDialogStep++;
+      } else {
+        // Dopo secondo dialog → zoom e mostra scelta
+        guruState = 'zoom';
+        guruTimer = 0;
+      }
+    }
+    return;
+  }
+});
 
 // Tap to advance cutscene dialogs
 canvas.addEventListener('click', ()=>{
@@ -979,6 +1145,7 @@ function initLevel2() {
 
   generateLevel2Bg();
   generateHouse1();
+  generateHouse2();
 
   // Update heal button label
   const el = document.getElementById('healLabel');
@@ -1003,6 +1170,8 @@ function generateLevel2Bg() {
   for (let i=0;i<6;i++) bgElements.push({type:'bird',x:Math.random()*lw,y:60+Math.random()*80,phase:Math.random()*Math.PI*2});
   // House 1 location
   bgElements.push({type:'house1',x:W*1.5});
+  // House 2 - Tempio del Culto
+  bgElements.push({type:'temple',x:W*3.2});
 }
 
 function generateHouse1() {
@@ -1013,6 +1182,18 @@ function generateHouse1() {
   obstacles.push({type:'door', x:hx+60, y:gy, w:30, h:60, active:true, cleared:false});
   // Snake inside house
   snake = {x:hx+200, y:gy, w:60, h:20, vx:-1.5, active:true, frame:0, frameTimer:0};
+}
+
+function generateHouse2() {
+  house2X = W * 3.2;
+  templeExitX = house2X + W * 2 + 20; // uscita destra del tempio
+  const gy = GROUND_Y();
+  // Porta ingresso tempio (sinistra)
+  obstacles.push({type:'temple_door', x:house2X+80, y:gy, w:40, h:70, active:true, cleared:false});
+  // Guru position (fondo del tempio)
+  obstacles.push({type:'guru_trigger', x:house2X + W*1.2, y:gy, w:60, h:80, active:true, cleared:false});
+  // Uscita destra
+  obstacles.push({type:'temple_exit', x:templeExitX, y:gy, w:30, h:80, active:true, cleared:false});
 }
 
 function updateLevel2() {
@@ -1212,6 +1393,8 @@ function drawLevel2Background() {
       ctx.stroke();
     } else if (el.type==='house1') {
       drawHouse1(Math.round(el.x - camera), gy);
+    } else if (el.type==='temple') {
+      drawTemple(Math.round(el.x - camera), gy);
     }
   });
 
@@ -1282,6 +1465,249 @@ function drawHouse1(sx, gy) {
       ctx.textAlign='center'; ctx.fillText('⚠ SCAPPA! ⚠',sx+110,gy-245); ctx.textAlign='left';
     }
   }
+}
+
+
+function drawTemple(sx, gy) {
+  const TW = W * 2.2;   // larghezza 2+ schermate
+  const TH = 160;       // altezza tempio (1 piano)
+  const col = '#e8e8e8';
+  const colD = '#c8c8c8';
+  const colDD = '#a8a8a8';
+
+  // MURO principale
+  ctx.fillStyle = col;
+  ctx.fillRect(sx, gy-TH, TW, TH);
+
+  // Colonne stile tempio greco (ogni 80px)
+  ctx.fillStyle = colD;
+  for (let cx=sx+20; cx<sx+TW-20; cx+=80) {
+    ctx.fillRect(cx, gy-TH, 18, TH);      // colonna
+    ctx.fillRect(cx-6, gy-TH, 30, 12);    // capitello
+    ctx.fillRect(cx-4, gy-8, 26, 10);     // base
+  }
+
+  // FRONTONE triangolare (entrata sinistra)
+  ctx.fillStyle = colD;
+  ctx.beginPath();
+  ctx.moveTo(sx-10, gy-TH);
+  ctx.lineTo(sx+120, gy-TH-70);
+  ctx.lineTo(sx+250, gy-TH);
+  ctx.closePath(); ctx.fill();
+  // decorazione frontone
+  ctx.fillStyle = '#d0d0d0';
+  ctx.beginPath();
+  ctx.moveTo(sx+10, gy-TH);
+  ctx.lineTo(sx+120, gy-TH-55);
+  ctx.lineTo(sx+230, gy-TH);
+  ctx.closePath(); ctx.fill();
+
+  // TETTO orizzontale
+  ctx.fillStyle = colDD;
+  ctx.fillRect(sx-10, gy-TH-8, TW+20, 12);
+
+  // PORTA ingresso (sinistra)
+  ctx.fillStyle = '#bbb';
+  ctx.fillRect(sx+90, gy-70, 40, 70);
+  ctx.fillStyle = '#999';
+  ctx.fillRect(sx+108, gy-50, 8, 8);  // maniglia
+
+  // Fregio decorativo (linea con pattern)
+  ctx.fillStyle = colDD;
+  ctx.fillRect(sx, gy-TH+2, TW, 8);
+  ctx.fillStyle = col;
+  for (let fx=sx+10; fx<sx+TW-10; fx+=24) {
+    ctx.fillRect(fx, gy-TH+2, 14, 8);
+  }
+
+  // PERSONCINE in bianco sullo sfondo (dentro il tempio)
+  const cultists = [
+    {ox:180},{ox:300},{ox:450},{ox:580},{ox:700},
+    {ox:850},{ox:980},{ox:1120},{ox:1280},{ox:1400},
+    {ox:1550},{ox:1680},{ox:1820},{ox:1950},{ox:2050},
+  ];
+  cultists.forEach(c=>{
+    const cx2 = sx + c.ox;
+    if (cx2 < -30 || cx2 > W+30) return;
+    const sway = Math.sin(Date.now()/1200 + c.ox) * 3;
+    // corpo bianco stilizzato
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(cx2-6, gy-50+sway, 12, 28);   // veste
+    ctx.fillRect(cx2-4, gy-65+sway, 8, 6);      // collo
+    // testa
+    ctx.fillRect(cx2-7, gy-82+sway, 14, 18);
+    // capelli/cappuccio bianco
+    ctx.fillStyle = '#e0e0e0';
+    ctx.fillRect(cx2-8, gy-84+sway, 16, 10);
+    // occhi vuoti
+    ctx.fillStyle = '#bbb';
+    ctx.fillRect(cx2-4, gy-76+sway, 3,3);
+    ctx.fillRect(cx2+1, gy-76+sway, 3,3);
+  });
+
+  // PORTA uscita destra
+  ctx.fillStyle = '#bbb';
+  ctx.fillRect(sx+TW-130, gy-70, 40, 70);
+  ctx.fillStyle = '#999';
+  ctx.fillRect(sx+TW-114, gy-50, 8, 8);
+
+  // Guru e palle (se dentro tempio)
+  if (insideTemple) {
+    drawGuru(sx + W*1.2, gy);
+    drawGuruBalls();
+  }
+
+  // Choice buttons sopra il canvas (HTML overlay)
+  updateCultChoiceUI();
+}
+
+function drawGuru(gx, gy) {
+  if (guruState === 'idle') return;
+  const t = Date.now();
+  const angry = guruState === 'angry';
+  const scale = angry ? 1.6 : 1.0;
+  const bob = Math.sin(t/400)*3;
+
+  ctx.save();
+  ctx.translate(Math.round(gx), Math.round(gy));
+  ctx.scale(scale, scale);
+  const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
+
+  // veste bianca lunga
+  p(-18,-80+bob, 36,60,'#f5f5f5');
+  p(-22,-60+bob, 44,40,'#f0f0f0');
+  // barba bianca lunghissima
+  p(-10,-50+bob, 20,50,'#fff');
+  p(-8,-30+bob, 16,50,'#f0f0f0');
+  p(-6,-10+bob, 12,30,'#fff');
+  p(-4, 10+bob, 8,20,'#f5f5f5');
+  // corpo
+  p(-14,-90+bob, 28,14,'#f5f5f5');
+  // testa
+  p(-14,-120+bob, 28,32,'#fde8c8');
+  // capelli bianchi
+  p(-16,-122+bob, 32,10,'#fff');
+  p(-18,-120+bob, 6,20,'#fff');
+  p(12,-120+bob, 6,20,'#fff');
+  // occhi
+  if (!angry) {
+    p(-8,-112+bob, 6,6,'#2a1a0e');
+    p(2,-112+bob, 6,6,'#2a1a0e');
+    p(-7,-111+bob, 3,3,'#fff');
+    p(3,-111+bob, 3,3,'#fff');
+    // sorriso benvenuto
+    p(-6,-102+bob, 12,3,'#c08060');
+    p(-4,-99+bob, 8,3,'#c08060');
+  } else {
+    // OCCHI ARRABBIATI con raggi
+    p(-10,-114+bob, 8,8,'#ff2200');
+    p(2,-114+bob, 8,8,'#ff2200');
+    // raggi dagli occhi
+    const rayLen = 30 + Math.sin(t/100)*10;
+    ctx.fillStyle='rgba(255,200,0,0.8)';
+    ctx.fillRect(-6,-114+bob, rayLen,4);
+    ctx.fillRect(2,-114+bob, -rayLen,4);
+    // bocca urlante
+    p(-10,-100+bob, 20,8,'#aa0000');
+    p(-7,-98+bob, 14,6,'#ffaaaa');
+    // aura arrabbiata
+    if (Math.floor(t/150)%2===0) {
+      ctx.strokeStyle='#ff4400'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(0,-80+bob,55,0,Math.PI*2); ctx.stroke();
+    }
+    // braccia alzate minacciose
+    p(-35,-85+bob, 20,10,'#f5f5f5');
+    p(15,-85+bob, 20,10,'#f5f5f5');
+  }
+
+  // label
+  if (!angry) {
+    ctx.restore();
+    ctx.save();
+    ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#888'; ctx.textAlign='center';
+    ctx.fillText('GURU', Math.round(gx), Math.round(gy-140));
+    ctx.textAlign='left';
+  } else {
+    ctx.restore();
+    ctx.save();
+    if (Math.floor(t/300)%2===0) {
+      ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ff2200'; ctx.textAlign='center';
+      ctx.fillText('ERESIA!', Math.round(gx), Math.round(gy-210));
+      ctx.textAlign='left';
+    }
+  }
+  ctx.restore();
+
+  // Dialog box guru
+  drawGuruDialog(gx, gy);
+}
+
+function drawGuruDialog(gx, gy) {
+  if (guruState !== 'dialog') return;
+  const dialogs = [
+    {who:'GURU', text:'BENVENUTI! Questo è il\nCULTO DELLA COLLINA\nDI LIMBIATE'},
+    {who:'GURU', text:'Dalla vostra età e\nprestanza fisica...\nSareste OTTIMI ADEPTI!'},
+  ];
+  const dlg = dialogs[guruDialogStep];
+  if (!dlg) return;
+  const bx=20, by=60, bw=W-40, bh=130;
+  ctx.fillStyle='rgba(240,240,240,0.95)'; ctx.fillRect(bx,by,bw,bh);
+  ctx.strokeStyle='#aaa'; ctx.lineWidth=2; ctx.strokeRect(bx,by,bw,bh);
+  ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#666';
+  ctx.fillText(dlg.who+':',bx+12,by+22);
+  ctx.fillStyle='#222';
+  dlg.text.split('\n').forEach((line,i)=>{ ctx.fillText(line,bx+12,by+46+i*24); });
+  if (Math.floor(Date.now()/400)%2===0) {
+    ctx.font='6px "Press Start 2P"'; ctx.fillStyle='#999';
+    ctx.textAlign='right'; ctx.fillText('tocca ▶',bx+bw-10,by+bh-10); ctx.textAlign='left';
+  }
+}
+
+function drawGuruBalls() {
+  guruBalls.forEach(b=>{
+    // trail
+    b.trail.forEach((pt,i)=>{
+      const alpha = i/b.trail.length * 0.4;
+      ctx.fillStyle=`rgba(255,220,50,${alpha})`;
+      const ts = (b.size * i/b.trail.length)|0;
+      ctx.fillRect(Math.round(sc(pt.x))-ts/2, Math.round(pt.y)-ts/2, ts, ts);
+    });
+    // palla principale
+    const bsx = Math.round(sc(b.x));
+    const bsy = Math.round(b.y);
+    // alone
+    ctx.fillStyle='rgba(255,255,200,0.3)';
+    ctx.beginPath(); ctx.arc(bsx,bsy,b.size+6,0,Math.PI*2); ctx.fill();
+    // nucleo
+    ctx.fillStyle='#ffffaa';
+    ctx.beginPath(); ctx.arc(bsx,bsy,b.size,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#ffffff';
+    ctx.beginPath(); ctx.arc(bsx-3,bsy-3,b.size*0.4,0,Math.PI*2); ctx.fill();
+  });
+}
+
+// ── UI overlay per scelta culto ──
+function updateCultChoiceUI() {
+  const div = document.getElementById('cultChoice');
+  if (!div) return;
+  if (guruState === 'zoom' && !cultChoiceSelected) {
+    div.style.display='flex';
+  } else {
+    div.style.display='none';
+  }
+}
+
+function handleCultChoice() {
+  cultChoiceSelected = true;
+  document.getElementById('cultChoice').classList.add('hidden');
+  // Qualsiasi scelta → guru si arrabbia
+  setTimeout(()=>{
+    guruState = 'angry';
+    guruTimer = 0;
+    guruBalls = [];
+    shake = 10;
+    spawnParticles(house2X + W*1.2 + 30, GROUND_Y()-80, '#ff4400', 30);
+  }, 400);
 }
 
 function drawSnake() {
