@@ -162,9 +162,10 @@ let iliaHealCooldown = 0;
 let healEffect = 0;
 let levelTitle = '';
 let levelTitleTimer = 0;
-let snake = null;          // snake enemy in house 1
-let housePhase = 0;        // which house (0=approaching, 1=inside, 2=fleeing)
+let snake = null;
+let housePhase = 0;
 let insideHouse = false;
+let houseX = 0;  // posizione globale della casa 1
 
 const GRAVITY    = 0.55;
 const JUMP_FORCE = -13;
@@ -909,7 +910,7 @@ function drawCutscene() {
   else if (cutscene.phase === 6 && cutscene.timer >= 110) dlg = DIALOGS[4];
 
   if (dlg) {
-    const bx=20, by=H-130, bw=W-40, bh=110;
+    const bx=20, by=60, bw=W-40, bh=120;
     ctx.fillStyle='rgba(0,0,10,0.92)'; ctx.fillRect(bx,by,bw,bh);
     ctx.strokeStyle='#ffe066'; ctx.lineWidth=2; ctx.strokeRect(bx,by,bw,bh);
     ctx.font='8px "Press Start 2P"';
@@ -997,7 +998,8 @@ function generateLevel2Bg() {
 }
 
 function generateHouse1() {
-  const hx = W*1.5;
+  houseX = W*1.5;
+  const hx = houseX;
   const gy = GROUND_Y();
   // Door (trigger zone)
   obstacles.push({type:'door', x:hx+60, y:gy, w:30, h:60, active:true, cleared:false});
@@ -1061,13 +1063,12 @@ function updateLevel2() {
     snake.x += snake.vx;
     snake.frameTimer++; if(snake.frameTimer>12){snake.frame=(snake.frame+1)%4;snake.frameTimer=0;}
     // Reverse at walls
-    const hx = W*1.5;
-    if (snake.x < hx+10) snake.vx = Math.abs(snake.vx);
-    if (snake.x > hx+350) snake.vx = -Math.abs(snake.vx);
+    if (snake.x < houseX+10) snake.vx = Math.abs(snake.vx);
+    if (snake.x > houseX+350) snake.vx = -Math.abs(snake.vx);
 
     // Snake collision with Carlo
     const pL=player.x, pR=player.x+player.w, pT=player.y-player.h, pB=player.y;
-    const sL=snake.x, sR=snake.x+snake.w, sT=snake.y-snake.h, sB=snake.y;
+    const sL=snake.x, sR=snake.x+snake.w, sT=snake.y-20, sB=snake.y+2;
     if (pR>sL && pL<sR && pB>sT+4 && pT<sB && player.invincible===0) {
       energy -= 12;
       player.invincible = 80; shake=6;
@@ -1079,13 +1080,13 @@ function updateLevel2() {
   // ── Door trigger (enter house) ──
   const door = obstacles.find(o=>o.type==='door' && o.active);
   if (door) {
-    if (player.x+player.w > door.x && player.x < door.x+door.w && !insideHouse) {
+    if (player.x+player.w > door.x+15 && player.x < door.x+door.w && !insideHouse) {
       insideHouse = true;
       housePhase = 1;
-      if (snake) snake.active = true;
+      if (snake) { snake.active = true; snake.x = houseX+250; }
     }
-    // If player exits house to the left, win house 1
-    if (insideHouse && player.x < door.x - 10) {
+    // If player exits house to the left (back through door), win house 1
+    if (insideHouse && player.x < door.x - 20) {
       insideHouse = false;
       door.active = false;
       if (snake) snake.active = false;
@@ -1202,7 +1203,7 @@ function drawLevel2Background() {
       ctx.moveTo(bx,by); ctx.quadraticCurveTo(bx+8,by-wing,bx+16,by);
       ctx.stroke();
     } else if (el.type==='house1') {
-      drawHouse1(sx, gy);
+      drawHouse1(Math.round(el.x - camera), gy);
     }
   });
 
@@ -1247,29 +1248,33 @@ function drawHouse1(sx, gy) {
 function drawSnake() {
   if (!snake || !snake.active) return;
   const sx = Math.round(sc(snake.x));
-  const sy = Math.round(snake.y);
+  const gy = GROUND_Y();
   const t = Date.now();
   const slither = Math.sin(t/200) * 4;
-  ctx.save(); ctx.translate(sx, sy);
+  ctx.save(); ctx.translate(sx, gy); // translate to ground level
   const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
-  // body segments
-  p(0,-8+slither, 20,12,'#2a7a2a');
-  p(18,-6+slither*0.7,16,10,'#2a7a2a');
-  p(32,-10+slither*0.4,16,10,'#2a7a2a');
-  p(46,-8+slither*0.2,14,10,'#2a7a2a');
-  // scale pattern
-  p(4,-6+slither,6,4,'#3a9a3a'); p(12,-6+slither,6,4,'#3a9a3a');
+  // body (drawn above ground = negative y)
+  p(0, -12+slither,  20,12,'#2a7a2a');
+  p(18,-10+slither*0.7,16,10,'#2a7a2a');
+  p(32,-14+slither*0.4,16,10,'#2a7a2a');
+  p(46,-12+slither*0.2,14,10,'#2a7a2a');
+  // scales
+  p(4,-10+slither,6,4,'#3a9a3a'); p(14,-10+slither,6,4,'#3a9a3a');
+  p(22,-8+slither,6,4,'#3a9a3a');
   // head
-  p(-8,-10+slither,18,14,'#1a6a1a');
+  p(-10,-14+slither,18,14,'#1a6a1a');
   // eyes
-  p(-4,-8+slither,4,4,'#ff4400'); p(2,-8+slither,4,4,'#ff4400');
-  p(-3,-7+slither,2,2,'#000'); p(3,-7+slither,2,2,'#000');
-  // tongue
+  p(-6,-12+slither,4,4,'#ff4400'); p(0,-12+slither,4,4,'#ff4400');
+  p(-5,-11+slither,2,2,'#111');    p(1,-11+slither,2,2,'#111');
+  // tongue flicker
   if (Math.floor(t/300)%2===0) {
-    p(-14,-5+slither,6,2,'#ff2222');
-    p(-20,-7+slither,3,2,'#ff2222');
-    p(-20,-3+slither,3,2,'#ff2222');
+    p(-18,-9+slither,8,2,'#ff2222');
+    p(-24,-11+slither,4,2,'#ff2222');
+    p(-24,-7+slither,4,2,'#ff2222');
   }
+  // warning label
+  ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#88ff44';
+  ctx.textAlign='center'; ctx.fillText('🐍',10,-22+slither); ctx.textAlign='left';
   ctx.restore();
 }
 
