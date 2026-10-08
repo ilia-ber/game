@@ -1588,7 +1588,9 @@ function drawL2Temple(gy) {
   // Hint scappa
   if (l2.guruState==='angry') {
     ctx.font='9px "Press Start 2P"'; ctx.fillStyle='#ff2222'; ctx.textAlign='center';
-    if (Math.floor(Date.now()/300)%2===0) ctx.fillText('▶ SCAPPA A DESTRA! ▶',W/2,90);
+    ctx.fillText('▶ SCAPPA A DESTRA! ▶',W/2,90);
+    ctx.font='10px "Press Start 2P"'; ctx.fillStyle='#ff0'; ctx.textAlign='left';
+    ctx.fillText('state:'+l2.guruState+' x:'+Math.round(player.x)+'/'+Math.round(W), 10, 120);
     ctx.textAlign='left';
 
   }
