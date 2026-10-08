@@ -907,20 +907,19 @@ let heartBubbles = [];  // cuoricini bollicine intorno a Carlo
 function spawnHeartBubbles() {
   heartBubbles = [];
   const colors = ['#ff88bb','#ff44aa','#ffaad4','#ff66cc','#ffccee','#ee2299'];
-  for (let i = 0; i < 12; i++) {
-    const angle = (i / 12) * Math.PI * 2;
-    const dist = 28 + Math.random() * 18;
+  for (let i = 0; i < 10; i++) {
+    // Distribuiti in semicerchio SOPRA la testa
+    const angle = Math.PI + (i / 9) * Math.PI; // da 180° a 360° (sopra)
+    const dist = 22 + Math.random() * 20;
     heartBubbles.push({
-      // partono vicino alla testa di Carlo
-      ox: Math.cos(angle) * dist,  // offset x dall'origine
-      oy: Math.sin(angle) * dist,  // offset y dall'origine
-      phase: Math.random() * Math.PI * 2,  // fase ballonzolo
-      size: 5 + Math.random() * 6,
+      ox: Math.cos(angle) * dist,
+      oy: Math.sin(angle) * dist - 10, // offset extra verso su
+      phase: Math.random() * Math.PI * 2,
+      size: 4 + Math.random() * 5,
       color: colors[Math.floor(Math.random() * colors.length)],
-      speed: 0.3 + Math.random() * 0.4,
-      life: 1.0,
+      speed: 0.4 + Math.random() * 0.3,
       popped: false,
-      popTimer: 80 + Math.floor(Math.random() * 80),  // quando scoppia
+      popTimer: 60 + Math.floor(Math.random() * 60),
     });
   }
 }
@@ -944,7 +943,7 @@ function drawHeartBubbles() {
   const t = Date.now() / 1000;
   // Centro testa di Carlo nel canvas (coordinata schermo)
   const carloScreenX = Math.round(sc(player.x)) + 14;
-  const carloScreenY = Math.round(player.y - player.h) - 8;
+  const carloScreenY = Math.round(player.y - player.h) + 6; // centro testa
 
   heartBubbles.forEach(b => {
     if (b.popped) return;
@@ -1169,9 +1168,17 @@ function generateLevel2Bg() {
   // Birds
   for (let i=0;i<6;i++) bgElements.push({type:'bird',x:Math.random()*lw,y:60+Math.random()*80,phase:Math.random()*Math.PI*2});
   // House 1 location
-  bgElements.push({type:'house1',x:W*1.5});
-  // House 2 - Tempio del Culto
-  bgElements.push({type:'temple',x:W*3.2});
+  bgElements.push({type:'house1',x:W*1.8});
+  // Transizione: colonne rotte e rovine tra casa 1 e tempio
+  for (let i=0;i<6;i++) {
+    bgElements.push({type:'ruin_col', x:W*2.8 + i*W*0.35, h:80+Math.random()*60, broken:Math.random()>0.4});
+  }
+  // Rovine sparse
+  for (let i=0;i<4;i++) {
+    bgElements.push({type:'ruin_block', x:W*2.6+i*W*0.4+Math.random()*80, y:0});
+  }
+  // House 2 - Tempio del Culto (posizionato raggiungibile)
+  bgElements.push({type:'temple',x:W*4.5});
 }
 
 function generateHouse1() {
@@ -1185,8 +1192,8 @@ function generateHouse1() {
 }
 
 function generateHouse2() {
-  house2X = W * 3.2;
-  templeExitX = house2X + W * 2 + 20; // uscita destra del tempio
+  house2X = W * 4.5;
+  templeExitX = house2X + W * 2.2; // uscita destra del tempio
   const gy = GROUND_Y();
   // Porta ingresso tempio (sinistra)
   obstacles.push({type:'temple_door', x:house2X+80, y:gy, w:40, h:70, active:true, cleared:false});
@@ -1200,7 +1207,7 @@ function updateLevel2() {
   if (state!=='playing' || level!==2) return;
 
   const gy = GROUND_Y();
-  const lw = W*5;
+  const lw = W*8;
   if (shake>0) shake-=0.5;
   if (powerupCooldown>0) powerupCooldown--;
   if (iliaHealCooldown>0) iliaHealCooldown--;
@@ -1391,6 +1398,34 @@ function drawLevel2Background() {
       ctx.moveTo(bx,by); ctx.quadraticCurveTo(bx-8,by-wing,bx-16,by);
       ctx.moveTo(bx,by); ctx.quadraticCurveTo(bx+8,by-wing,bx+16,by);
       ctx.stroke();
+    } else if (el.type==='ruin_col') {
+      // Colonna greca rotta di transizione
+      const cx = Math.round(el.x - camera);
+      const ch = el.h;
+      ctx.fillStyle='#d8d0c0';
+      ctx.fillRect(cx-8, gy-ch, 16, ch);
+      // scanalature
+      ctx.fillStyle='#c8c0b0';
+      for(let ri=0;ri<3;ri++) ctx.fillRect(cx-8+ri*5, gy-ch, 2, ch);
+      // capitello (se non troppo rotta)
+      if (!el.broken) {
+        ctx.fillStyle='#ccc8b8'; ctx.fillRect(cx-14,gy-ch,28,8);
+        ctx.fillRect(cx-10,gy-ch-6,20,8);
+      } else {
+        // colonna spezzata a metà
+        ctx.fillStyle='#b8b0a0';
+        ctx.fillRect(cx-10, gy-ch*0.6, 20, 8); // pezzo rotto
+        // macerie a terra
+        ctx.fillRect(cx-18, gy-8, 14, 8);
+        ctx.fillRect(cx+4, gy-6, 18, 6);
+      }
+    } else if (el.type==='ruin_block') {
+      const rx = Math.round(el.x - camera);
+      ctx.fillStyle='#ccc4b4';
+      ctx.fillRect(rx, GROUND_Y()-14, 40, 14);
+      ctx.fillRect(rx+10, GROUND_Y()-22, 24, 10);
+      ctx.fillStyle='#bbb4a4';
+      ctx.fillRect(rx+2, GROUND_Y()-12, 36, 2);
     } else if (el.type==='house1') {
       drawHouse1(Math.round(el.x - camera), gy);
     } else if (el.type==='temple') {
