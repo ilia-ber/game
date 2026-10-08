@@ -1260,18 +1260,7 @@ function updateLevel2() {
       });
     }
 
-    // Uscita DESTRA quando angry: cammina oltre W*1.8
-    if (l2.guruState === 'angry' && camera > W * 0.5) {
-      l2.guruBalls = [];
-      l2.guruState = 'done';
-      l2.templeEntered = false;
-      l2.winTriggered = true;
-      player.x = l2.templeX + l2.templeW + 80;
-      player.y = L2_GY();
-      ilia.x = player.x - 55;
-      ilia.y = L2_GY();
-      camera = Math.max(0, player.x - W * 0.4);
-    }
+
     // Uscita sinistra prima del dialogo
     if (player.x < 30 && (l2.guruState === 'idle' || l2.guruState === 'dialog')) {
       l2.templeEntered = false;
