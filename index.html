@@ -1253,7 +1253,7 @@ function updateLevel2() {
     }
 
     // Uscita DESTRA quando angry: cammina oltre W*1.8
-    if (l2.guruState === 'angry' && player.x > W * 1.8) {
+    if (l2.guruState === 'angry' && player.x + player.w > W - 25) {
       l2.guruBalls = [];
       l2.guruState = 'done';
       l2.templeEntered = false;
