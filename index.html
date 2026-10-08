@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0a0a1a"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <title>CARLO'S QUEST v26</title>
+  <title>CARLO'S QUEST</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <meta http-equiv="Pragma" content="no-cache"/>
   <link rel="manifest" href="manifest.json"/>
@@ -1265,8 +1265,8 @@ function updateLevel2() {
     if (l2.guruState === 'angry') {
       l2.battleTimer++;
       camera += 1.5;
-      if (l2.battleTimer > 240) l2.doorVisible = true;
-      if (l2.battleTimer > 300 && !l2.battleDone) {
+      if (l2.battleTimer > 720) l2.doorVisible = true;
+      if (l2.battleTimer > 900 && !l2.battleDone) {
         l2.battleDone = true;
         l2.guruBalls = [];
       }
@@ -1277,16 +1277,18 @@ function updateLevel2() {
         l2.winTriggered = true;
         l2.guruState = 'done';
         l2.templeEntered = false;
-        player.x = l2.templeX + l2.templeW + 80;
+        // Posiziona i personaggi fuori dal tempio a destra
+        player.x = l2.templeX + l2.templeW + 100;
         player.y = L2_GY();
         ilia.x = player.x - 55;
         ilia.y = L2_GY();
         camera = Math.max(0, player.x - W * 0.4);
         spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
+        // Aspetta 2 secondi all'esterno poi schermata vittoria
         setTimeout(()=>{
           document.getElementById('screenL2Win').classList.remove('hidden');
           state = 'win2';
-        }, 800);
+        }, 2500);
       }
     }
 
@@ -1555,24 +1557,65 @@ function drawL2Temple(gy) {
   ctx.fillStyle='#5a5040';
   for(let tx=0;tx<W;tx+=44) ctx.fillRect(tx,gy,42,8);
   ctx.fillStyle='#3a3020'; ctx.fillRect(0,gy+8,W,H-gy-8);
-  // Muri
-  ctx.fillStyle='#3a3428'; ctx.fillRect(0,0,28,gy); ctx.fillRect(W-28,0,28,gy);
+  // Muri con mattoni che scorrono (danno percezione movimento)
+  const brickOffset = Math.floor(camera / 32) % 2; // mattoni scorrevoli
+  ctx.fillStyle='#3a3428';
+  ctx.fillRect(0,0,28,gy); ctx.fillRect(W-28,0,28,gy);
+  // Pattern mattoni sui muri
+  ctx.fillStyle='#2a2418';
+  for(let by=0; by<gy; by+=24) {
+    const offset = ((by/24|0) + brickOffset) % 2 === 0 ? 0 : 12;
+    ctx.fillRect(2, by, 24, 2); // linea orizzontale
+  }
+  for(let by=0; by<gy; by+=24) {
+    const offset2 = ((by/24|0)) % 2 === 0 ? 8 : 20;
+    ctx.fillRect(offset2%28, by, 2, 22); // linea verticale
+  }
+  // Stessa cosa sul muro dx
+  ctx.fillStyle='#2a2418';
+  for(let by=0; by<gy; by+=24) {
+    ctx.fillRect(W-26, by, 24, 2);
+  }
   // Colonne
   [[22,'#4a4438'],[W-22,'#4a4438']].forEach(([cx,col])=>{
     ctx.fillStyle=col; ctx.fillRect(cx-10,gy*0.08,20,gy*0.86);
     ctx.fillStyle='#5a5448'; ctx.fillRect(cx-16,gy*0.08,32,12);
   });
-  // Torce
+  // Torce — posizionate nel mondo, scorrono con camera
   const tf=Math.sin(Date.now()/150)*0.25+0.75;
+  // Torce sui muri laterali ogni 200px nel mondo
+  const torchWorldPositions = [200, 400, 600, 800, 1000, 1200, 1400];
+  torchWorldPositions.forEach(twx => {
+    const tsx = twx - camera;
+    if (tsx < 30 || tsx > W-30) return;
+    // Torcia sx muro
+    ctx.fillStyle='#6a4020'; ctx.fillRect(26,gy*0.4,6,18);
+    ctx.fillStyle=`rgba(255,150,30,${tf})`; ctx.beginPath(); ctx.arc(29,gy*0.4,10,0,Math.PI*2); ctx.fill();
+    // Torcia dx muro
+    ctx.fillStyle='#6a4020'; ctx.fillRect(W-32,gy*0.4,6,18);
+    ctx.fillStyle=`rgba(255,150,30,${tf})`; ctx.beginPath(); ctx.arc(W-29,gy*0.4,10,0,Math.PI*2); ctx.fill();
+  });
+  // Torce fisse (sempre visibili)
   [W*0.22,W*0.78].forEach(tx=>{
     ctx.fillStyle='#6a4020'; ctx.fillRect(tx-3,gy*0.28,6,22);
     ctx.fillStyle=`rgba(255,150,30,${tf})`; ctx.beginPath(); ctx.arc(tx,gy*0.28,13,0,Math.PI*2); ctx.fill();
     ctx.fillStyle=`rgba(255,220,100,${tf*0.5})`; ctx.beginPath(); ctx.arc(tx,gy*0.28,22,0,Math.PI*2); ctx.fill();
   });
-  // Rune
+  // Rune + crepe soffitto che scorrono
   ctx.fillStyle='#7a6a50'; ctx.font='15px serif'; ctx.textAlign='center';
-  ['☽','✦','⊕','✦','☾'].forEach((s,i)=>ctx.fillText(s,W*0.15+i*(W*0.7/4),gy*0.22));
+  ['☽','✦','⊕','✦','☾'].forEach((s,i)=>ctx.fillText(s,W*0.15+i*(W*0.7/4),gy*0.18));
   ctx.textAlign='left';
+  // Crepe sul soffitto che variano con camera
+  ctx.strokeStyle='#555'; ctx.lineWidth=1.5;
+  const crackSeed = Math.floor(camera/80);
+  for(let ci=0; ci<4; ci++) {
+    const cx2 = ((crackSeed*47 + ci*113) % (W-60)) + 30;
+    const cy2 = 20 + (ci*33)%40;
+    ctx.beginPath(); ctx.moveTo(cx2, cy2);
+    ctx.lineTo(cx2 + 15 - ci*5, cy2 + 25 + ci*8);
+    ctx.lineTo(cx2 + 8, cy2 + 40 + ci*5);
+    ctx.stroke();
+  }
   // Porta uscita sinistra
   if (l2.guruState === 'angry' || l2.battleDone) {
     // Porta sx chiusa
