@@ -1064,6 +1064,9 @@ let l2 = {
   choiceVisible: false,
   enterTimer: 0,
   winTriggered: false,
+  battleTimer: 0,
+  battleDone: false,
+  doorVisible: false,
 };
 
 function initLevel2() {
@@ -1098,6 +1101,9 @@ function initLevel2() {
   l2.titleTimer = 180;
   l2.choiceVisible = false;
   l2.winTriggered = false;
+  l2.battleTimer = 0;
+  l2.battleDone = false;
+  l2.doorVisible = false;
 
   // Update button
   const em = document.getElementById('powerupEmoji');
@@ -1162,13 +1168,12 @@ function updateLevel2() {
   // Camera libera (nessun blocco artificiale)
   const targetCam = player.x - W * 0.35;
   camera += (targetCam - camera) * 0.1;
-  if (l2.templeEntered && l2.guruState === 'angry') {
-    camera = Math.max(0, targetCam); // scorre liberamente a destra
+  if (l2.templeEntered && l2.guruState !== 'angry') {
+    camera = 0; // fisso quando non in battaglia
   } else if (!l2.templeEntered) {
     camera = Math.max(0, Math.min(camera, lw - W));
-  } else {
-    camera = 0; // dentro tempio in modalità normale: fisso
   }
+  // quando angry: camera gestita dall'auto-scroll sopra
 
   // Entrata tempio: quando player supera templeX entra automaticamente
   if (!l2.templeEntered && player.x + player.w > l2.templeX + 80) {
@@ -1210,12 +1215,10 @@ function updateLevel2() {
   // ── Dentro tempio ──
   if (l2.templeEntered) {
     // Muri stanza Carlo
-    if (player.x < 20) player.x = 20;  // muro sx sempre
     if (l2.guruState !== 'angry') {
-      // Muro dx solo quando guru non è arrabbiato
+      if (player.x < 20) player.x = 20;
       if (player.x + player.w > W - 20) player.x = W - player.w - 20;
     }
-    // Quando angry: nessun muro dx - il corridoio si allunga
     // Ilia clamp
     ilia.x = Math.max(20, Math.min(ilia.x, W - 45));
 
@@ -1553,23 +1556,20 @@ function drawL2Temple(gy) {
   ['☽','✦','⊕','✦','☾'].forEach((s,i)=>ctx.fillText(s,W*0.15+i*(W*0.7/4),gy*0.22));
   ctx.textAlign='left';
   // Porta uscita sinistra
-  if (l2.guruState === 'angry') {
+  if (l2.guruState === 'angry' || l2.battleDone) {
     // Porta sx chiusa
     ctx.fillStyle='#2a1a0a'; ctx.fillRect(28,gy-128,52,128);
-    // Porta uscita destra — disegnata in coordinate mondo (scorre con camera)
-    const exitScreenX = Math.round(W * 0.8); // sempre a destra dello schermo
-    if (exitScreenX > 0 && exitScreenX < W + 100) {
-      // Porta aperta
+    // Porta uscita destra — appare dopo 4 secondi
+    if (l2.doorVisible || l2.battleDone) {
+      const exitX = W - 90;
       ctx.fillStyle='#0e0a06';
-      ctx.fillRect(exitScreenX, gy-148, 56, 148);
-      ctx.beginPath(); ctx.arc(exitScreenX+28, gy-148, 28, Math.PI, 0); ctx.fill();
-      // Luce verde uscita
-      const gExit = ctx.createRadialGradient(exitScreenX+28,gy-80,5,exitScreenX+28,gy-80,70);
-      gExit.addColorStop(0,'rgba(80,220,80,0.5)'); gExit.addColorStop(1,'transparent');
-      ctx.fillStyle=gExit; ctx.fillRect(exitScreenX-10,gy-160,90,160);
-      // Label
+      ctx.fillRect(exitX, gy-148, 56, 148);
+      ctx.beginPath(); ctx.arc(exitX+28, gy-148, 28, Math.PI, 0); ctx.fill();
+      const gExit = ctx.createRadialGradient(exitX+28,gy-80,5,exitX+28,gy-80,70);
+      gExit.addColorStop(0,'rgba(80,220,80,0.55)'); gExit.addColorStop(1,'transparent');
+      ctx.fillStyle=gExit; ctx.fillRect(exitX-10,gy-160,90,160);
       ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#88ff44'; ctx.textAlign='center';
-      if (Math.floor(Date.now()/400)%2===0) ctx.fillText('USCITA!', exitScreenX+28, gy-160);
+      if (Math.floor(Date.now()/400)%2===0) ctx.fillText('USCITA!', exitX+28, gy-162);
       ctx.textAlign='left';
     }
   } else {
@@ -1607,6 +1607,7 @@ function drawL2Temple(gy) {
 
 function drawL2Guru(gy) {
   if (l2.guruState==='idle') return;
+  if (l2.battleDone) return; // guru dissolto
   const angry = l2.guruState==='angry';
   const t = Date.now();
   const bob = Math.sin(t/300)*5;
