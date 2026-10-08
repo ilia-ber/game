@@ -211,29 +211,28 @@ function initGame() {
   const guruTrigger = obstacles.find(o=>o.type==='guru_trigger' && o.active);
   const templeExit = obstacles.find(o=>o.type==='temple_exit' && o.active);
 
-  // ── Muro del tempio: blocca Carlo a sinistra della porta ──
+  // ── Porta: Carlo entra avvicinandosi al tempio (da destra) ──
+  // La porta è al centro del tempio. Usiamo una zona di entrata più larga
   if (house2X > 0 && !insideTemple) {
-    const wallX = house2X + 20; // bordo sinistro del tempio
-    if (player.x + player.w > wallX) {
-      player.x = wallX - player.w; // respingi
-      player.vx = 0;
-      camera = Math.max(0, Math.min(camera, house2X - W*0.5)); // blocca camera
-    }
-  }
-
-  // ── Porta: Carlo entra saltando nella porta (y bassa + x nella porta) ──
-  if (house2X > 0 && !insideTemple) {
-    const doorCX = house2X + Math.round(W * 2.2 * 0.5); // centro porta
-    const doorLeft = doorCX - 30;
-    const doorRight = doorCX + 30;
-    const doorTop = GROUND_Y() - 148; // top arco porta
-    if (player.x + player.w > doorLeft && player.x < doorRight && player.y - player.h < doorTop + 40) {
-      // Entra nel tempio: teletrasporto in stanza interna
-      insideTemple = true;
-      player.x = 80;
-      player.y = GROUND_Y();
-      player.vy = 0;
-      camera = 0;
+    // Zona di entrata: tutto il fronte del tempio (muro che blocca + porta centrale)
+    const templeLeft = house2X + 20;
+    const doorCX = house2X + Math.round(W * 1.1); // centro porta in coordinate mondo
+    const doorLeft = doorCX - 60;
+    const doorRight = doorCX + 60;
+    // Blocca il muro sinistro del tempio
+    if (player.x + player.w > templeLeft) {
+      // Se il player è nella zona porta (centro) -> entra
+      if (player.x + player.w > doorLeft && player.x < doorRight) {
+        insideTemple = true;
+        player.x = 80;
+        player.y = GROUND_Y();
+        player.vx = 0; player.vy = 0;
+        camera = 0;
+      } else {
+        // Altrimenti respingi
+        player.x = templeLeft - player.w;
+        player.vx = 0;
+      }
     }
   }
 
@@ -858,9 +857,9 @@ function render() {
       drawCarlo();
       drawLevelTitle();
       // Hint porta tempio quando vicini
-      if (house2X > 0 && player.x > house2X - W*0.6) {
+      if (house2X > 0 && player.x > house2X - W*0.3) {
         ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
-        if (Math.floor(Date.now()/500)%2===0) ctx.fillText('↑ SALTA NELLA PORTA ↑', W/2, H-170);
+        if (Math.floor(Date.now()/500)%2===0) ctx.fillText('▶ ENTRA NELLA PORTA ▶', W/2, H-170);
         ctx.textAlign='left';
       }
     } else {
