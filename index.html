@@ -1159,8 +1159,8 @@ function updateLevel2() {
 
   // ── Camera ──
   // Porta del tempio in coordinate mondo
-  const doorWorldL = l2.templeX + Math.floor(l2.templeW/2) - 32;
-  const doorWorldR = l2.templeX + Math.floor(l2.templeW/2) + 32;
+  const doorWorldL = l2.templeX + 70;
+  const doorWorldR = l2.templeX + 145;
 
   let maxCam = lw - W;
   if (!l2.templeEntered) {
@@ -1183,7 +1183,7 @@ function updateLevel2() {
   camera = Math.max(0, Math.min(camera, maxCam));
 
   // ── Serpente (dentro casa 1) ──
-  if (!l2.house1Entered && player.x > l2.house1X) {
+  if (!l2.house1Entered && player.x + player.w > l2.house1X + 30) {
     l2.house1Entered = true;
     l2.snakeActive = true;
   }
@@ -1325,8 +1325,8 @@ function drawL2() {
 function drawL2World(gy) {
   // Cielo
   const grad = ctx.createLinearGradient(0,0,0,gy);
-  grad.addColorStop(0,'#87ceeb'); grad.addColorStop(0.8,'#d0eeff'); grad.addColorStop(1,'#c0e890');
-  ctx.fillStyle = grad; ctx.fillRect(0,0,W,gy);
+  grad.addColorStop(0,'#87ceeb'); grad.addColorStop(1,'#c8e8f8');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
 
   // Sole
   ctx.fillStyle = '#ffe566';
@@ -1506,8 +1506,8 @@ function drawL2TempleExterior(sx, gy) {
       for(let vi=0;vi<7;vi++) ctx.fillRect(cx-4+Math.sin(vi)*3,gy-198+vi*26,6,18);
     }
   }
-  // Porta centrale (ad arco)
-  const doorX = sx + TW/2 - 28;
+  // Porta sinistra (raggiungibile)
+  const doorX = sx + 80;
   ctx.fillStyle='#1a1510';
   ctx.fillRect(doorX, gy-148, 56, 85);
   ctx.beginPath(); ctx.arc(doorX+28,gy-148,28,Math.PI,0); ctx.fill();
