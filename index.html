@@ -97,7 +97,7 @@
   <h2>CARLO HA<br/>RAGGIUNTO<br/>ILIA!</h2>
   <button class="startBtn" id="btnNext" style="background:#2d7a27">CONTINUA ▶</button>
 </div>
-<div class="hidden" id="cultChoice" style="display:none;" style="position:fixed;bottom:160px;left:0;right:0;display:flex;justify-content:center;gap:12px;z-index:30;padding:0 20px;">
+<div id="cultChoice" style="display:none;position:fixed;bottom:160px;left:0;right:0;justify-content:center;gap:12px;z-index:30;padding:0 20px;">
   <button onclick="handleCultChoice()" style="font-family:'Press Start 2P',monospace;font-size:9px;background:#c0c0c0;color:#333;border:3px solid #888;padding:12px 16px;border-radius:4px;cursor:pointer;">NO</button>
   <button onclick="handleCultChoice()" style="font-family:'Press Start 2P',monospace;font-size:9px;background:#c0c0c0;color:#333;border:3px solid #888;padding:12px 16px;border-radius:4px;cursor:pointer;">HELL NO</button>
   <button onclick="handleCultChoice()" style="font-family:'Press Start 2P',monospace;font-size:9px;background:#c0c0c0;color:#333;border:3px solid #888;padding:12px 16px;border-radius:4px;cursor:pointer;">MA SUCA</button>
@@ -1279,6 +1279,7 @@ function showCultChoiceUI(show) {
   l2.choiceVisible = show;
   const d = document.getElementById('cultChoice');
   if (d) d.style.display = show ? 'flex' : 'none';
+  console.log('cultChoice:', show, d ? d.style.display : 'not found');
 }
 
 function handleCultChoice() {
