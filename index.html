@@ -1242,11 +1242,11 @@ function updateLevel2() {
         b.x += b.vx; b.y += b.vy;
         if (b.y > gy - 8) { b.y = gy - 8; b.vy *= -0.6; }
         b.life--;
-        // Collisione
+        // Collisione — colpisce ma non blocca il movimento (invincible breve)
         const dist = Math.sqrt((b.x-(player.x+14))**2+(b.y-(player.y-player.h/2))**2);
         if (dist < 16 && player.invincible === 0) {
-          energy -= 15; player.invincible = 80; shake = 8; b.life = 0;
-          spawnParticles(player.x+14, player.y-20, '#ffffff', 15);
+          energy -= 10; player.invincible = 20; shake = 4; b.life = 0;
+          spawnParticles(player.x+14, player.y-20, '#ffffff', 8);
           if (energy <= 0) { energy = 0; gameOver(); }
         }
       });
@@ -1588,9 +1588,7 @@ function drawL2Temple(gy) {
   // Hint scappa
   if (l2.guruState==='angry') {
     ctx.font='9px "Press Start 2P"'; ctx.fillStyle='#ff2222'; ctx.textAlign='center';
-    ctx.fillText('▶ SCAPPA A DESTRA! ▶',W/2,90);
-    ctx.font='10px "Press Start 2P"'; ctx.fillStyle='#ff0'; ctx.textAlign='left';
-    ctx.fillText('state:'+l2.guruState+' x:'+Math.round(player.x)+'/'+Math.round(W), 10, 120);
+    if (Math.floor(Date.now()/300)%2===0) ctx.fillText('▶ SCAPPA A DESTRA! ▶',W/2,90);
     ctx.textAlign='left';
 
   }
