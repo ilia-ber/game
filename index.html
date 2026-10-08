@@ -703,7 +703,6 @@ function update() {
   if (state==='win2') return;
   if (state!=='playing') return;
   if (level===2) { updateLevel2(); return; }
-  if (level===1) {
   if (shake>0) shake-=0.5;
   if (powerupCooldown>0) powerupCooldown--;
   if (player.invincible>0) player.invincible--;
@@ -815,7 +814,6 @@ function update() {
   }
 
   updateHUD();
-  } // end level===1
 }
 
 function updateHUD() {
