@@ -1063,6 +1063,7 @@ let l2 = {
   // choice UI
   choiceVisible: false,
   enterTimer: 0,
+  winTriggered: false,
 };
 
 function initLevel2() {
@@ -1096,6 +1097,7 @@ function initLevel2() {
   l2.healEffect = 0;
   l2.titleTimer = 180;
   l2.choiceVisible = false;
+  l2.winTriggered = false;
 
   // Update button
   const em = document.getElementById('powerupEmoji');
@@ -1136,6 +1138,16 @@ function updateLevel2() {
   // ── Ilia segue Carlo sempre ──
   ilia.x += (player.x - 55 - ilia.x) * 0.08;
   ilia.y = gy;
+
+  // ── Win dopo fuga dal tempio ──
+  if (l2.guruState === 'done' && !l2.templeEntered && !l2.winTriggered) {
+    l2.winTriggered = true;
+    spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
+    setTimeout(()=>{
+      document.getElementById('screenL2Win').classList.remove('hidden');
+      state = 'win2';
+    }, 1200);
+  }
 
   // ── Heal ──
   if (powerupPressed && l2.healCooldown === 0 && energy < 100) {
@@ -1195,13 +1207,6 @@ function updateLevel2() {
     if (player.x < 20) player.x = 20;
     if (l2.guruState !== 'angry') {
       if (player.x + player.w > W - 20) player.x = W - player.w - 20;
-    } else {
-      // Guru arrabbiato: nessun muro, mostra posizione
-      if (player.x > W * 0.5) {
-        const d = document.getElementById('cultChoice');
-        // Debug: mostra stato su canvas (verrà disegnato nel render)
-        l2._debugX = Math.round(player.x);
-      }
     }
     // Ilia clamp
     ilia.x = Math.max(20, Math.min(ilia.x, W - 45));
@@ -1243,7 +1248,7 @@ function updateLevel2() {
     }
 
     // Uscita DESTRA quando guru è arrabbiato
-    // Uscita destra: Carlo cammina fuori dallo schermo
+    // Uscita destra: Carlo esce dallo schermo a destra
     if (l2.guruState === 'angry' && player.x > W + 10) {
       l2.guruBalls = [];
       l2.guruState = 'done';
@@ -1253,11 +1258,6 @@ function updateLevel2() {
       ilia.x = player.x - 55;
       ilia.y = L2_GY();
       camera = Math.max(0, player.x - W * 0.4);
-      spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
-      setTimeout(()=>{
-        document.getElementById('screenL2Win').classList.remove('hidden');
-        state = 'win2';
-      }, 600);
     }
     // Uscita sinistra solo prima del dialogo
     if (player.x < 30 && (l2.guruState === 'idle' || l2.guruState === 'dialog')) {
@@ -1589,9 +1589,7 @@ function drawL2Temple(gy) {
     ctx.font='9px "Press Start 2P"'; ctx.fillStyle='#ff2222'; ctx.textAlign='center';
     if (Math.floor(Date.now()/300)%2===0) ctx.fillText('▶ SCAPPA A DESTRA! ▶',W/2,90);
     ctx.textAlign='left';
-    // Debug posizione
-    ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#ff0'; ctx.textAlign='left';
-    ctx.fillText('px:'+Math.round(player.x)+'/'+Math.round(W)+' guru:'+l2.guruState, 10, 115);
+
   }
 }
 
