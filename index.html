@@ -1168,13 +1168,21 @@ function updateLevel2() {
     maxCam = Math.min(maxCam, l2.templeX + Math.floor(l2.templeW/2) - W * 0.45);
   }
 
-  // Muro del tempio: blocca Carlo tranne che nella zona porta
+  // Muro del tempio: blocca Carlo solo se NON è nella zona porta
   if (!l2.templeEntered) {
     const playerMid = player.x + player.w/2;
     const atDoor = playerMid > doorWorldL && playerMid < doorWorldR;
-    if (!atDoor && player.x + player.w > l2.templeX + 20) {
-      player.x = l2.templeX + 20 - player.w;
+    if (!atDoor && player.x + player.w > l2.templeX) {
+      // Blocca al bordo sinistro del tempio
+      player.x = l2.templeX - player.w;
       player.vx = 0;
+    }
+    // Se è nella zona porta, lascialo passare fino all'ingresso
+    if (atDoor && player.x + player.w > doorWorldR) {
+      l2.templeEntered = true;
+      player.x = 80; player.y = gy;
+      player.vx = 0; player.vy = 0;
+      camera = 0;
     }
   }
 
@@ -1208,18 +1216,7 @@ function updateLevel2() {
     }
   }
 
-  // ── Entrata tempio: Carlo cammina dentro la porta ──
-  if (!l2.templeEntered) {
-    const playerMid = player.x + player.w/2;
-    const atDoor = playerMid > doorWorldL && playerMid < doorWorldR;
-    // Entra se è nella zona porta e si muove verso destra
-    if (atDoor && player.x + player.w > l2.templeX + 30) {
-      l2.templeEntered = true;
-      player.x = 80; player.y = gy;
-      player.vx = 0; player.vy = 0;
-      camera = 0;
-    }
-  }
+  // Entrata tempio gestita nel blocco muro sopra
 
   // ── Dentro tempio ──
   if (l2.templeEntered) {
