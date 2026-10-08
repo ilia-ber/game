@@ -1258,7 +1258,7 @@ function updateLevel2() {
     }
 
     // Uscita DESTRA quando angry: cammina oltre W*1.8
-    if (l2.guruState === 'angry' && player.x > W * 2.5) {
+    if (l2.guruState === 'angry' && player.x > W * 1.2) {
       l2.guruBalls = [];
       l2.guruState = 'done';
       l2.templeEntered = false;
@@ -1556,14 +1556,22 @@ function drawL2Temple(gy) {
   if (l2.guruState === 'angry') {
     // Porta sx chiusa
     ctx.fillStyle='#2a1a0a'; ctx.fillRect(28,gy-128,52,128);
-    // Porta dx APERTA (muro destro sparisce)
-    ctx.fillStyle='#ffe066'; ctx.font='7px "Press Start 2P"'; ctx.textAlign='center';
-    if (Math.floor(Date.now()/400)%2===0) ctx.fillText('▶ AVANTI!',W-54,gy-140);
-    ctx.textAlign='left';
-    // Luce verde a destra
-    const grdR=ctx.createRadialGradient(W-10,gy-70,4,W-10,gy-70,80);
-    grdR.addColorStop(0,'rgba(80,200,80,0.4)'); grdR.addColorStop(1,'transparent');
-    ctx.fillStyle=grdR; ctx.fillRect(W-130,gy-155,130,155);
+    // Porta uscita destra — disegnata in coordinate mondo (scorre con camera)
+    const exitScreenX = Math.round(W * 1.2 - camera);
+    if (exitScreenX > 0 && exitScreenX < W + 100) {
+      // Porta aperta
+      ctx.fillStyle='#0e0a06';
+      ctx.fillRect(exitScreenX, gy-148, 56, 148);
+      ctx.beginPath(); ctx.arc(exitScreenX+28, gy-148, 28, Math.PI, 0); ctx.fill();
+      // Luce verde uscita
+      const gExit = ctx.createRadialGradient(exitScreenX+28,gy-80,5,exitScreenX+28,gy-80,70);
+      gExit.addColorStop(0,'rgba(80,220,80,0.5)'); gExit.addColorStop(1,'transparent');
+      ctx.fillStyle=gExit; ctx.fillRect(exitScreenX-10,gy-160,90,160);
+      // Label
+      ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#88ff44'; ctx.textAlign='center';
+      if (Math.floor(Date.now()/400)%2===0) ctx.fillText('USCITA!', exitScreenX+28, gy-160);
+      ctx.textAlign='left';
+    }
   } else {
     // Porta aperta normale
     ctx.fillStyle='#0e0a06'; ctx.fillRect(28,gy-128,52,128);
