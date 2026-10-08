@@ -1252,18 +1252,6 @@ function updateLevel2() {
       });
     }
 
-    // Uscita DESTRA quando guru è arrabbiato
-    // Uscita destra: Carlo esce dallo schermo a destra
-    if (l2.guruState === 'angry' && player.x > W + 10) {
-      l2.guruBalls = [];
-      l2.guruState = 'done';
-      l2.templeEntered = false;
-      player.x = l2.templeX + l2.templeW + 80;
-      player.y = L2_GY();
-      ilia.x = player.x - 55;
-      ilia.y = L2_GY();
-      camera = Math.max(0, player.x - W * 0.4);
-    }
     // Uscita DESTRA quando angry: cammina oltre W*1.8
     if (l2.guruState === 'angry' && player.x > W * 1.8) {
       l2.guruBalls = [];
