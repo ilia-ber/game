@@ -1162,7 +1162,12 @@ function updateLevel2() {
   // Camera libera (nessun blocco artificiale)
   const targetCam = player.x - W * 0.35;
   camera += (targetCam - camera) * 0.1;
-  camera = Math.max(0, Math.min(camera, lw - W));
+  if (l2.templeEntered && l2.guruState === 'angry') {
+    // Dentro tempio con guru angry: camera scorre a destra
+    camera = Math.max(0, targetCam);
+  } else {
+    camera = Math.max(0, Math.min(camera, lw - W));
+  }
 
   // Entrata tempio: quando player supera templeX entra automaticamente
   if (!l2.templeEntered && player.x + player.w > l2.templeX + 80) {
@@ -1204,7 +1209,7 @@ function updateLevel2() {
   // ── Dentro tempio ──
   if (l2.templeEntered) {
     // Muri stanza Carlo
-    if (player.x < 20) player.x = 20;
+    if (player.x < 20) player.x = 20;  // muro sx sempre attivo
     if (l2.guruState !== 'angry') {
       if (player.x + player.w > W - 20) player.x = W - player.w - 20;
     }
@@ -1259,7 +1264,19 @@ function updateLevel2() {
       ilia.y = L2_GY();
       camera = Math.max(0, player.x - W * 0.4);
     }
-    // Uscita sinistra solo prima del dialogo
+    // Uscita DESTRA quando angry: cammina oltre W*1.8
+    if (l2.guruState === 'angry' && player.x > W * 1.8) {
+      l2.guruBalls = [];
+      l2.guruState = 'done';
+      l2.templeEntered = false;
+      l2.winTriggered = true;
+      player.x = l2.templeX + l2.templeW + 80;
+      player.y = L2_GY();
+      ilia.x = player.x - 55;
+      ilia.y = L2_GY();
+      camera = Math.max(0, player.x - W * 0.4);
+    }
+    // Uscita sinistra prima del dialogo
     if (player.x < 30 && (l2.guruState === 'idle' || l2.guruState === 'dialog')) {
       l2.templeEntered = false;
       player.x = l2.templeX - 60;
@@ -1297,25 +1314,7 @@ function handleCultChoice() {
     shake = 12;
     spawnParticles(W*0.65, L2_GY()-80, '#ff4400', 30);
   }, 300);
-  // Dopo 5 secondi forza la fine del livello
-  setTimeout(() => {
-    if (state === 'playing' && level === 2) {
-      l2.guruBalls = [];
-      l2.guruState = 'done';
-      l2.templeEntered = false;
-      l2.winTriggered = true;
-      player.x = l2.templeX + l2.templeW + 80;
-      player.y = L2_GY();
-      ilia.x = player.x - 55;
-      ilia.y = L2_GY();
-      camera = Math.max(0, player.x - W * 0.4);
-      spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
-      setTimeout(() => {
-        document.getElementById('screenL2Win').classList.remove('hidden');
-        state = 'win2';
-      }, 800);
-    }
-  }, 5000);
+
 }
 
 // ── DRAW LIVELLO 2 ──────────────────────────────────────
@@ -1564,20 +1563,16 @@ function drawL2Temple(gy) {
   ctx.textAlign='left';
   // Porta uscita sinistra
   if (l2.guruState === 'angry') {
-    // Porta bloccata dal guru arrabbiato — muro scuro
+    // Porta sx chiusa
     ctx.fillStyle='#2a1a0a'; ctx.fillRect(28,gy-128,52,128);
-    ctx.fillStyle='#ff2200'; ctx.font='7px "Press Start 2P"'; ctx.textAlign='center';
-    if (Math.floor(Date.now()/400)%2===0) ctx.fillText('BLOCCATA',54,gy-140);
-    ctx.textAlign='left';
-    // Uscita destra (muro aperto)
-    ctx.fillStyle='#0e0a06'; ctx.fillRect(W-80,gy-128,52,128);
-    ctx.beginPath(); ctx.arc(W-54,gy-128,26,Math.PI,0); ctx.fill();
-    const grdR=ctx.createRadialGradient(W-54,gy-70,4,W-54,gy-70,70);
-    grdR.addColorStop(0,'rgba(80,160,60,0.3)'); grdR.addColorStop(1,'transparent');
-    ctx.fillStyle=grdR; ctx.fillRect(W-130,gy-155,130,155);
+    // Porta dx APERTA (muro destro sparisce)
     ctx.fillStyle='#ffe066'; ctx.font='7px "Press Start 2P"'; ctx.textAlign='center';
-    if (Math.floor(Date.now()/400)%2===0) ctx.fillText('▶ SCAPPA!',W-54,gy-140);
+    if (Math.floor(Date.now()/400)%2===0) ctx.fillText('▶ AVANTI!',W-54,gy-140);
     ctx.textAlign='left';
+    // Luce verde a destra
+    const grdR=ctx.createRadialGradient(W-10,gy-70,4,W-10,gy-70,80);
+    grdR.addColorStop(0,'rgba(80,200,80,0.4)'); grdR.addColorStop(1,'transparent');
+    ctx.fillStyle=grdR; ctx.fillRect(W-130,gy-155,130,155);
   } else {
     // Porta aperta normale
     ctx.fillStyle='#0e0a06'; ctx.fillRect(28,gy-128,52,128);
