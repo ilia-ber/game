@@ -1203,7 +1203,8 @@ function updateLevel2() {
   if (l2.templeEntered) {
     // Muri stanza Carlo
     if (player.x < 20) player.x = 20;
-    if (player.x + player.w > W - 20) player.x = W - player.w - 20;
+    // Muro destro solo se guru non è arrabbiato
+    if (l2.guruState !== 'angry' && player.x + player.w > W - 20) player.x = W - player.w - 20;
     // Ilia clamp
     ilia.x = Math.max(20, Math.min(ilia.x, W - 45));
 
