@@ -846,7 +846,8 @@ function render() {
       // Tempio come sfondo fisso quando vicini
       if (house2X > 0) {
         const templeSx = Math.round(house2X - camera);
-        if (templeSx < W + 200 && templeSx > -200) {
+        // Visibile in range ampio — non scompare mai quando siamo vicini
+        if (templeSx < W + 800 && templeSx > -W*2.5) {
           drawTemple(templeSx, GROUND_Y());
         }
       }
@@ -1448,13 +1449,13 @@ function drawLevel2Background() {
       });
       ctx.fillRect(sx, el.y, el.w*0.9, 18);
     } else if (el.type==='daybuilding') {
+      const dgy = GROUND_Y();
       ctx.fillStyle='#c8b89a';
-      ctx.fillRect(Math.round(sx),gy-el.h,el.w,el.h);
+      ctx.fillRect(Math.round(sx),dgy-el.h,el.w,el.h);
       ctx.fillStyle='#a89870';
-      ctx.fillRect(Math.round(sx),gy-el.h,el.w,4);
-      // windows
+      ctx.fillRect(Math.round(sx),dgy-el.h,el.w,4);
       ctx.fillStyle='#7ab8e8';
-      for(let wy=gy-el.h+10;wy<gy-10;wy+=20)
+      for(let wy=dgy-el.h+10;wy<dgy-10;wy+=20)
         for(let wx=sx+6;wx<sx+el.w-6;wx+=16)
           ctx.fillRect(wx,wy,8,10);
     } else if (el.type==='bird') {
@@ -1467,33 +1468,31 @@ function drawLevel2Background() {
       ctx.moveTo(bx,by); ctx.quadraticCurveTo(bx+8,by-wing,bx+16,by);
       ctx.stroke();
     } else if (el.type==='ruin_col') {
-      // Colonna greca rotta di transizione
       const cx = Math.round(el.x - camera);
       const ch = el.h;
+      const rgy = GROUND_Y();
       ctx.fillStyle='#d8d0c0';
-      ctx.fillRect(cx-8, gy-ch, 16, ch);
-      // scanalature
+      ctx.fillRect(cx-8, rgy-ch, 16, ch);
       ctx.fillStyle='#c8c0b0';
-      for(let ri=0;ri<3;ri++) ctx.fillRect(cx-8+ri*5, gy-ch, 2, ch);
-      // capitello (se non troppo rotta)
+      for(let ri=0;ri<3;ri++) ctx.fillRect(cx-8+ri*5, rgy-ch, 2, ch);
       if (!el.broken) {
-        ctx.fillStyle='#ccc8b8'; ctx.fillRect(cx-14,gy-ch,28,8);
-        ctx.fillRect(cx-10,gy-ch-6,20,8);
+        ctx.fillStyle='#ccc8b8';
+        ctx.fillRect(cx-14,rgy-ch,28,8);
+        ctx.fillRect(cx-10,rgy-ch-6,20,8);
       } else {
-        // colonna spezzata a metà
         ctx.fillStyle='#b8b0a0';
-        ctx.fillRect(cx-10, gy-ch*0.6, 20, 8); // pezzo rotto
-        // macerie a terra
-        ctx.fillRect(cx-18, gy-8, 14, 8);
-        ctx.fillRect(cx+4, gy-6, 18, 6);
+        ctx.fillRect(cx-10, rgy-Math.round(ch*0.6), 20, 8);
+        ctx.fillRect(cx-18, rgy-8, 14, 8);
+        ctx.fillRect(cx+4, rgy-6, 18, 6);
       }
     } else if (el.type==='ruin_block') {
       const rx = Math.round(el.x - camera);
+      const rgy2 = GROUND_Y();
       ctx.fillStyle='#ccc4b4';
-      ctx.fillRect(rx, GROUND_Y()-14, 40, 14);
-      ctx.fillRect(rx+10, GROUND_Y()-22, 24, 10);
+      ctx.fillRect(rx, rgy2-14, 40, 14);
+      ctx.fillRect(rx+10, rgy2-22, 24, 10);
       ctx.fillStyle='#bbb4a4';
-      ctx.fillRect(rx+2, GROUND_Y()-12, 36, 2);
+      ctx.fillRect(rx+2, rgy2-12, 36, 2);
     } else if (el.type==='house1') {
       drawHouse1(Math.round(el.x - camera), gy);
     } else if (el.type==='temple') {
@@ -1501,12 +1500,12 @@ function drawLevel2Background() {
     }
   });
 
-  // Green ground
-  ctx.fillStyle='#5a8a30'; ctx.fillRect(0,gy,W,8);
-  ctx.fillStyle='#3a6a18'; ctx.fillRect(0,gy+8,W,H-gy);
-  // ground details
+  // Green ground — sempre ancorato a GROUND_Y()
+  const gground = GROUND_Y();
+  ctx.fillStyle='#5a8a30'; ctx.fillRect(0,gground,W,8);
+  ctx.fillStyle='#3a6a18'; ctx.fillRect(0,gground+8,W,H-gground);
   ctx.fillStyle='#4a7a20';
-  for(let tx=(-camera%40);tx<W;tx+=40) ctx.fillRect(Math.round(tx),gy,2,8);
+  for(let tx=(-camera%40);tx<W;tx+=40) ctx.fillRect(Math.round(tx),gground,2,8);
 }
 
 function drawHouse1(sx, gy) {
