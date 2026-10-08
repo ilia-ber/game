@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0a0a1a"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <title>CARLO'S QUEST</title>
+  <title>CARLO'S QUEST v26</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <meta http-equiv="Pragma" content="no-cache"/>
   <link rel="manifest" href="manifest.json"/>
@@ -1277,18 +1277,12 @@ function updateLevel2() {
         l2.winTriggered = true;
         l2.guruState = 'done';
         l2.templeEntered = false;
-        // Posiziona i personaggi fuori dal tempio a destra
         player.x = l2.templeX + l2.templeW + 100;
         player.y = L2_GY();
         ilia.x = player.x - 55;
         ilia.y = L2_GY();
         camera = Math.max(0, player.x - W * 0.4);
         spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
-        // Aspetta 2 secondi all'esterno poi schermata vittoria
-        setTimeout(()=>{
-          document.getElementById('screenL2Win').classList.remove('hidden');
-          state = 'win2';
-        }, 2500);
       }
     }
 
