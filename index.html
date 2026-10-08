@@ -1384,6 +1384,12 @@ function drawL2World(gy) {
   const tsx = Math.round(l2.templeX - camera);
   if (tsx < W+300 && tsx > -l2.templeW-50) drawL2TempleExterior(tsx, gy);
 
+  // DEBUG TEMPORANEO
+  ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#ff0'; ctx.textAlign='left';
+  ctx.fillText('px:'+Math.round(player.x)+' tX:'+Math.round(l2.templeX), 10, 130);
+  ctx.fillText('dL:'+Math.round(l2.templeX+70)+' dR:'+Math.round(l2.templeX+145), 10, 145);
+  ctx.fillText('cam:'+Math.round(camera)+' W:'+Math.round(W), 10, 160);
+
   // Hint porta — in alto, ben visibile
   if (player.x > l2.templeX - W*0.5) {
     ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
