@@ -211,13 +211,13 @@ function initGame() {
   const guruTrigger = obstacles.find(o=>o.type==='guru_trigger' && o.active);
   const templeExit = obstacles.find(o=>o.type==='temple_exit' && o.active);
 
-  // Entra nel tempio
-  if (templeDoor && player.x+player.w > templeDoor.x+10 && !insideTemple) {
+  // Entra nel tempio quando supera house2X
+  if (!insideTemple && house2X > 0 && player.x > house2X + 60) {
     insideTemple = true;
   }
 
-  // Trigger guru dialog
-  if (insideTemple && guruTrigger && player.x+player.w > guruTrigger.x && guruState==='idle') {
+  // Trigger guru dialog: quando è abbastanza dentro
+  if (insideTemple && guruState==='idle' && house2X > 0 && player.x > house2X + W*0.8) {
     guruState = 'dialog';
     guruTimer = 0;
     guruDialogStep = 0;
@@ -275,7 +275,7 @@ function initGame() {
   }
 
   // Uscita tempio → vittoria casa2
-  if (insideTemple && guruState==='angry' && templeExit && player.x > templeExit.x) {
+  if (insideTemple && guruState==='angry' && player.x > templeExitX - 40) {
     guruState = 'defeated';
     guruBalls = [];
     insideTemple = false;
@@ -805,13 +805,27 @@ function render() {
   if (state==='cutscene') { drawCutscene(); return; }
   if (level===2) {
     drawLevel2Background();
-    drawObstacle(obstacles.find(o=>o.type==='door')||{active:false});
     drawParticles();
     drawSnake();
+    // Tempio e guru sempre visibili quando player è vicino
+    if (house2X > 0) {
+      const templeSx = Math.round(house2X - camera);
+      if (templeSx < W + 400 && templeSx > -400) {
+        drawTemple(templeSx, GROUND_Y());
+      }
+    }
+    drawGuruBalls();
     drawIliaHair(true);
     drawHealEffect();
     drawCarlo();
     drawLevelTitle();
+    // Freccia direzione se guru arrabbiato
+    if (guruState === 'angry') {
+      ctx.font='11px "Press Start 2P"'; ctx.fillStyle='#ff2222';
+      ctx.textAlign='center';
+      if (Math.floor(Date.now()/300)%2===0) ctx.fillText('▶▶ SCAPPA! ▶▶', W/2, 95);
+      ctx.textAlign='left';
+    }
     return;
   }
   drawBackground();
@@ -1429,7 +1443,7 @@ function drawLevel2Background() {
     } else if (el.type==='house1') {
       drawHouse1(Math.round(el.x - camera), gy);
     } else if (el.type==='temple') {
-      drawTemple(Math.round(el.x - camera), gy);
+      // gestito direttamente nel render
     }
   });
 
@@ -1504,95 +1518,147 @@ function drawHouse1(sx, gy) {
 
 
 function drawTemple(sx, gy) {
-  const TW = W * 2.2;   // larghezza 2+ schermate
-  const TH = 160;       // altezza tempio (1 piano)
-  const col = '#e8e8e8';
-  const colD = '#c8c8c8';
-  const colDD = '#a8a8a8';
+  const TW = Math.round(W * 2.2);
+  const ctx2 = ctx;
 
-  // MURO principale
-  ctx.fillStyle = col;
-  ctx.fillRect(sx, gy-TH, TW, TH);
-
-  // Colonne stile tempio greco (ogni 80px)
-  ctx.fillStyle = colD;
-  for (let cx=sx+20; cx<sx+TW-20; cx+=80) {
-    ctx.fillRect(cx, gy-TH, 18, TH);      // colonna
-    ctx.fillRect(cx-6, gy-TH, 30, 12);    // capitello
-    ctx.fillRect(cx-4, gy-8, 26, 10);     // base
-  }
-
-  // FRONTONE triangolare (entrata sinistra)
-  ctx.fillStyle = colD;
-  ctx.beginPath();
-  ctx.moveTo(sx-10, gy-TH);
-  ctx.lineTo(sx+120, gy-TH-70);
-  ctx.lineTo(sx+250, gy-TH);
-  ctx.closePath(); ctx.fill();
-  // decorazione frontone
-  ctx.fillStyle = '#d0d0d0';
-  ctx.beginPath();
-  ctx.moveTo(sx+10, gy-TH);
-  ctx.lineTo(sx+120, gy-TH-55);
-  ctx.lineTo(sx+230, gy-TH);
-  ctx.closePath(); ctx.fill();
-
-  // TETTO orizzontale
-  ctx.fillStyle = colDD;
-  ctx.fillRect(sx-10, gy-TH-8, TW+20, 12);
-
-  // PORTA ingresso (sinistra)
-  ctx.fillStyle = '#bbb';
-  ctx.fillRect(sx+90, gy-70, 40, 70);
-  ctx.fillStyle = '#999';
-  ctx.fillRect(sx+108, gy-50, 8, 8);  // maniglia
-
-  // Fregio decorativo (linea con pattern)
-  ctx.fillStyle = colDD;
-  ctx.fillRect(sx, gy-TH+2, TW, 8);
-  ctx.fillStyle = col;
-  for (let fx=sx+10; fx<sx+TW-10; fx+=24) {
-    ctx.fillRect(fx, gy-TH+2, 14, 8);
-  }
-
-  // PERSONCINE in bianco sullo sfondo (dentro il tempio)
-  const cultists = [
-    {ox:180},{ox:300},{ox:450},{ox:580},{ox:700},
-    {ox:850},{ox:980},{ox:1120},{ox:1280},{ox:1400},
-    {ox:1550},{ox:1680},{ox:1820},{ox:1950},{ox:2050},
-  ];
-  cultists.forEach(c=>{
-    const cx2 = sx + c.ox;
-    if (cx2 < -30 || cx2 > W+30) return;
-    const sway = Math.sin(Date.now()/1200 + c.ox) * 3;
-    // corpo bianco stilizzato
-    ctx.fillStyle = '#f0f0f0';
-    ctx.fillRect(cx2-6, gy-50+sway, 12, 28);   // veste
-    ctx.fillRect(cx2-4, gy-65+sway, 8, 6);      // collo
-    // testa
-    ctx.fillRect(cx2-7, gy-82+sway, 14, 18);
-    // capelli/cappuccio bianco
-    ctx.fillStyle = '#e0e0e0';
-    ctx.fillRect(cx2-8, gy-84+sway, 16, 10);
-    // occhi vuoti
-    ctx.fillStyle = '#bbb';
-    ctx.fillRect(cx2-4, gy-76+sway, 3,3);
-    ctx.fillRect(cx2+1, gy-76+sway, 3,3);
+  // ── SFONDO VEGETAZIONE ──
+  // Alberi tropicali dietro
+  const trees = [sx-60, sx+TW*0.2, sx+TW*0.5, sx+TW*0.75, sx+TW+40];
+  trees.forEach(tx=>{
+    // chioma
+    ctx2.fillStyle='#2d6b2d';
+    ctx2.beginPath(); ctx2.arc(tx, gy-180, 45, 0, Math.PI*2); ctx2.fill();
+    ctx2.fillStyle='#3a8a3a';
+    ctx2.beginPath(); ctx2.arc(tx-15, gy-170, 30, 0, Math.PI*2); ctx2.fill();
+    ctx2.beginPath(); ctx2.arc(tx+18, gy-165, 28, 0, Math.PI*2); ctx2.fill();
+    // tronco
+    ctx2.fillStyle='#5a3a1a'; ctx2.fillRect(tx-6, gy-140, 12, 80);
+    // foglie che scendono (rampicanti)
+    ctx2.fillStyle='#1a5a1a';
+    for(let li=0;li<5;li++) ctx2.fillRect(tx-20+li*8, gy-160+li*12, 6, 30);
   });
 
-  // PORTA uscita destra
-  ctx.fillStyle = '#bbb';
-  ctx.fillRect(sx+TW-130, gy-70, 40, 70);
-  ctx.fillStyle = '#999';
-  ctx.fillRect(sx+TW-114, gy-50, 8, 8);
+  // ── STRUTTURA TEMPIO ──
+  // Scalinata frontale (3 gradini)
+  const stairW = TW * 0.5;
+  const stairX = sx + TW*0.25;
+  ctx2.fillStyle='#b0aa98';
+  ctx2.fillRect(stairX-20, gy-24, stairW+40, 24); // gradino 1
+  ctx2.fillRect(stairX-10, gy-48, stairW+20, 26); // gradino 2
+  ctx2.fillRect(stairX,    gy-68, stairW,    22); // gradino 3
 
-  // Guru e palle (se dentro tempio)
-  if (insideTemple) {
-    drawGuru(sx + W*1.2, gy);
-    drawGuruBalls();
+  // Muro principale (grigio pietra)
+  ctx2.fillStyle='#c8c0b0';
+  ctx2.fillRect(sx+20, gy-200, TW-40, 135);
+
+  // Dettagli muro — blocchi di pietra
+  ctx2.fillStyle='#b8b0a0';
+  for(let row=0;row<4;row++) {
+    for(let col=0;col<12;col++) {
+      const bx = sx+20 + col*(TW-40)/12;
+      const by = gy-200 + row*34;
+      ctx2.strokeStyle='#a8a098'; ctx2.lineWidth=1;
+      ctx2.strokeRect(bx+1, by+1, (TW-40)/12-2, 32);
+    }
   }
 
-  // Choice buttons sopra il canvas (HTML overlay)
+  // Fregio decorativo in cima
+  ctx2.fillStyle='#a8a098';
+  ctx2.fillRect(sx+10, gy-210, TW-20, 14);
+  // pattern fregio
+  ctx2.fillStyle='#c0b8a8';
+  for(let fi=0;fi<20;fi++) ctx2.fillRect(sx+15+fi*((TW-30)/20), gy-208, (TW-30)/20-3, 10);
+
+  // Secondo livello (più piccolo)
+  ctx2.fillStyle='#ccc4b4';
+  ctx2.fillRect(sx+80, gy-280, TW-160, 75);
+  ctx2.fillStyle='#bcb4a4';
+  ctx2.fillRect(sx+70, gy-288, TW-140, 12);
+
+  // Colonne (davanti al muro)
+  const numCols = 7;
+  const colSpacing = (TW-80) / (numCols-1);
+  for(let ci=0;ci<numCols;ci++) {
+    const cx2 = sx+40 + ci*colSpacing;
+    // fusto colonna con scanalature
+    ctx2.fillStyle='#d0c8b8';
+    ctx2.fillRect(cx2-8, gy-200, 16, 135);
+    ctx2.fillStyle='#c0b8a8';
+    for(let ri=0;ri<3;ri++) ctx2.fillRect(cx2-8+ri*5, gy-200, 2, 135);
+    // capitello
+    ctx2.fillStyle='#bfb8a8'; ctx2.fillRect(cx2-14, gy-200, 28, 10);
+    ctx2.fillRect(cx2-10, gy-212, 20, 13);
+    // base
+    ctx2.fillStyle='#c8c0b0'; ctx2.fillRect(cx2-12, gy-68, 24, 8);
+  }
+
+  // Rampicanti sulle colonne
+  ctx2.fillStyle='#2a7a2a';
+  [sx+40, sx+40+colSpacing*2, sx+40+colSpacing*5].forEach(cvx=>{
+    for(let vi=0;vi<8;vi++) {
+      ctx2.fillRect(cvx-6+Math.sin(vi*0.8)*4, gy-200+vi*18, 8, 10);
+    }
+  });
+
+  // Porta ingresso (centro, scura e misteriosa)
+  const doorX = sx + TW/2 - 28;
+  ctx2.fillStyle='#1a1510';
+  ctx2.fillRect(doorX, gy-150, 56, 85);
+  // arco porta
+  ctx2.fillStyle='#1a1510';
+  ctx2.beginPath(); ctx2.arc(doorX+28, gy-150, 28, Math.PI, 0); ctx2.fill();
+  // luce fioca dentro
+  const grd = ctx2.createRadialGradient(doorX+28,gy-100,5,doorX+28,gy-100,50);
+  grd.addColorStop(0,'rgba(255,220,120,0.15)'); grd.addColorStop(1,'transparent');
+  ctx2.fillStyle=grd; ctx2.fillRect(doorX-10,gy-160,76,100);
+
+  // Vegetazione a terra davanti
+  ctx2.fillStyle='#3a7a3a';
+  for(let gi=0;gi<15;gi++) {
+    const gx2=sx+gi*(TW/15);
+    ctx2.fillRect(gx2, gy-18, 8, 18);
+    ctx2.fillRect(gx2+3, gy-26, 5, 10);
+  }
+
+  // Massi sparsi
+  [[sx+30,gy-20,22,16],[sx+TW-60,gy-18,28,14],[sx+TW*0.4,gy-16,18,12]].forEach(([rx,ry,rw,rh])=>{
+    ctx2.fillStyle='#9a9488'; ctx2.fillRect(rx,ry,rw,rh);
+    ctx2.fillStyle='#aaa498'; ctx2.fillRect(rx+2,ry+2,rw-4,4);
+  });
+
+  // Uscita destra
+  const exitX = sx + TW - 80;
+  ctx2.fillStyle='#1a1510';
+  ctx2.fillRect(exitX, gy-130, 45, 68);
+  ctx2.beginPath(); ctx2.arc(exitX+22, gy-130, 22, Math.PI, 0); ctx2.fill();
+
+  // Personcine cultiste dentro (visibili attraverso le colonne)
+  if (insideTemple || player.x > house2X - 100) {
+    const cultists = [
+      {ox:TW*0.15},{ox:TW*0.25},{ox:TW*0.35},{ox:TW*0.55},
+      {ox:TW*0.65},{ox:TW*0.75},{ox:TW*0.85},{ox:TW*0.9},
+    ];
+    cultists.forEach(c=>{
+      const cx3 = sx + c.ox;
+      if (cx3 < -20 || cx3 > W+20) return;
+      const sway = Math.sin(Date.now()/1400 + c.ox) * 2;
+      ctx2.fillStyle='#f0f0f0';
+      ctx2.fillRect(cx3-5, gy-55+sway, 10, 30);
+      ctx2.fillRect(cx3-6, gy-80+sway, 12, 27);
+      ctx2.fillStyle='#e8e8e8';
+      ctx2.fillRect(cx3-7, gy-82+sway, 14, 8);
+      ctx2.fillStyle='#ccc';
+      ctx2.fillRect(cx3-3, gy-74+sway, 3,3);
+      ctx2.fillRect(cx3, gy-74+sway, 3,3);
+    });
+  }
+
+  // Guru e dialogo
+  if (insideTemple) {
+    drawGuru(sx + TW*0.5, gy);
+  }
+
+  // Choice buttons
   updateCultChoiceUI();
 }
 
