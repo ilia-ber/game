@@ -206,122 +206,6 @@ function initGame() {
 
   generateLevel();
   generateBg();
-  // ── Casa 2: Tempio del Culto ──
-  const templeDoor = obstacles.find(o=>o.type==='temple_door' && o.active);
-  const guruTrigger = obstacles.find(o=>o.type==='guru_trigger' && o.active);
-  const templeExit = obstacles.find(o=>o.type==='temple_exit' && o.active);
-
-  // ── Porta: Carlo entra avvicinandosi al tempio (da destra) ──
-  // La porta è al centro del tempio. Usiamo una zona di entrata più larga
-  if (house2X > 0 && !insideTemple) {
-    // Zona di entrata: tutto il fronte del tempio (muro che blocca + porta centrale)
-    const templeLeft = house2X + 20;
-    const doorCX = house2X + Math.round(W * 1.1); // centro porta in coordinate mondo
-    const doorLeft = doorCX - 60;
-    const doorRight = doorCX + 60;
-    // Blocca il muro sinistro del tempio
-    if (player.x + player.w > templeLeft) {
-      // Se il player è nella zona porta (centro) -> entra
-      if (player.x + player.w > doorLeft && player.x < doorRight) {
-        insideTemple = true;
-        player.x = 80;
-        player.y = GROUND_Y();
-        player.vx = 0; player.vy = 0;
-        camera = 0;
-      } else {
-        // Altrimenti respingi
-        player.x = templeLeft - player.w;
-        player.vx = 0;
-      }
-    }
-  }
-
-  // ── Dentro il tempio: stanza chiusa ──
-  if (insideTemple) {
-    // Pareti stanza (larghezza W, il player non può uscire dai bordi)
-    if (player.x < 20) player.x = 20;
-    if (player.x + player.w > W - 20) player.x = W - player.w - 20;
-
-    // Trigger guru dialog quando entra
-    if (guruState==='idle') {
-      guruState = 'dialog';
-      guruTimer = 0;
-      guruDialogStep = 0;
-      showCultChoice = false;
-    }
-
-    // Uscita: porta a sinistra (x < 60 e non arrabbiato o dopo aver scappato)
-    if (player.x < 50) {
-      if (guruState === 'angry') {
-        // Scappa! Livello completato
-        insideTemple = false;
-        guruBalls = [];
-        guruState = 'defeated';
-        spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
-        setTimeout(()=>{
-          document.getElementById('screenL2Win').classList.remove('hidden');
-          state='win2';
-        }, 800);
-      } else if (guruState === 'idle' || guruState === 'dialog') {
-        // Può uscire prima di parlare col guru
-        insideTemple = false;
-        player.x = house2X - 60;
-        camera = Math.max(0, player.x - W*0.4);
-      }
-    }
-  }
-
-  // Guru state machine
-  if (guruState === 'dialog' || guruState === 'zoom') {
-    guruTimer++;
-  }
-
-  if (guruState === 'angry') {
-    guruTimer++;
-    // Spara palle ogni 60 frame
-    if (guruTimer % 60 === 0 && guruBalls.length < 8) {
-      const gx = house2X + W*1.2 + 30;
-      const gy2 = GROUND_Y() - 60;
-      const dx = player.x - gx;
-      const dy = (player.y - player.h/2) - gy2;
-      const dist = Math.sqrt(dx*dx+dy*dy);
-      guruBalls.push({
-        x: gx, y: gy2,
-        vx: (dx/dist)*4.5, vy: (dy/dist)*4.5,
-        life: 180, size: 10,
-        trail: []
-      });
-    }
-    // Aggiorna palle
-    guruBalls = guruBalls.filter(b=>b.life>0);
-    guruBalls.forEach(b=>{
-      b.trail.push({x:b.x, y:b.y});
-      if (b.trail.length>8) b.trail.shift();
-      // Homing leggero verso Carlo
-      const dx = player.x+14 - b.x;
-      const dy = (player.y-player.h/2) - b.y;
-      const dist = Math.sqrt(dx*dx+dy*dy)||1;
-      b.vx += (dx/dist)*0.15;
-      b.vy += (dy/dist)*0.15;
-      // Cap velocità
-      const spd = Math.sqrt(b.vx*b.vx+b.vy*b.vy);
-      if (spd>5) { b.vx=(b.vx/spd)*5; b.vy=(b.vy/spd)*5; }
-      b.x+=b.vx; b.y+=b.vy; b.life--;
-      // Rimbalza su pavimento
-      if (b.y > GROUND_Y()-b.size) { b.y=GROUND_Y()-b.size; b.vy*=-0.7; }
-      // Collisione Carlo
-      const pCx=player.x+14, pCy=player.y-player.h/2;
-      if (Math.sqrt((b.x-pCx)**2+(b.y-pCy)**2)<b.size+10 && player.invincible===0) {
-        energy-=15; player.invincible=80; shake=8;
-        b.life=0;
-        spawnParticles(player.x+14,player.y-20,'#ffffff',15);
-        if(energy<=0){energy=0;gameOver();}
-      }
-    });
-  }
-
-
-
   updateHUD();
 }
 
@@ -825,7 +709,7 @@ function updateHUD() {
     if (pc) pc.innerHTML='📱 x<span id="powerupCount">'+powerups+'</span>';
   } else {
     const pc = document.getElementById('powerupInfo');
-    if (pc) pc.innerHTML = iliaHealCooldown>0 ? '💋 ricarica...' : '💋 BACIO';
+    if (pc) pc.innerHTML = (l2 && l2.healCooldown>0) ? '💋 ricarica...' : '💋 BACIO';
   }
 }
 
