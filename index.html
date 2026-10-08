@@ -1261,6 +1261,35 @@ function updateLevel2() {
     }
 
 
+    // Auto-scroll battaglia
+    if (l2.guruState === 'angry') {
+      l2.battleTimer++;
+      camera += 1.5;
+      if (l2.battleTimer > 240) l2.doorVisible = true;
+      if (l2.battleTimer > 300 && !l2.battleDone) {
+        l2.battleDone = true;
+        l2.guruBalls = [];
+      }
+    }
+    if (l2.battleDone && !l2.winTriggered) {
+      if (!l2._exitTimer) l2._exitTimer = l2.battleTimer;
+      if (l2.battleTimer - l2._exitTimer > 60) {
+        l2.winTriggered = true;
+        l2.guruState = 'done';
+        l2.templeEntered = false;
+        player.x = l2.templeX + l2.templeW + 80;
+        player.y = L2_GY();
+        ilia.x = player.x - 55;
+        ilia.y = L2_GY();
+        camera = Math.max(0, player.x - W * 0.4);
+        spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
+        setTimeout(()=>{
+          document.getElementById('screenL2Win').classList.remove('hidden');
+          state = 'win2';
+        }, 800);
+      }
+    }
+
     // Uscita sinistra prima del dialogo
     if (player.x < 30 && (l2.guruState === 'idle' || l2.guruState === 'dialog')) {
       l2.templeEntered = false;
