@@ -361,6 +361,32 @@ function drawCarlo() {
   ctx.restore();
 }
 
+
+function drawIliaHair(brown) {
+  const sx = Math.round(sc(ilia.x));
+  ctx.save(); ctx.translate(sx, Math.round(ilia.y));
+  const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
+  const hair  = brown ? '#8b5a2b' : C.iHair;
+  const hairH = brown ? '#c08840' : '#f8a0c8';
+  const wv = Math.floor(Date.now()/500)%2===0 ? -2 : 0;
+  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fillRect(2,0,18,3);
+  p(1,-5,8,5,'#111'); p(11,-5,8,5,'#111');
+  p(2,-18,8,13,C.iPants); p(12,-18,8,13,C.iPants);
+  p(1,-30,20,13,C.iShirt);
+  p(-3,-29,4,11,C.iShirt); p(-3,-19,4,4,C.skin);
+  p(20,-29+wv,4,11,C.iShirt); p(20,-19+wv,4,4,C.skin);
+  p(7,-34,7,5,C.skin);
+  p(3,-44,16,12,C.skin); p(3,-33,16,2,C.skinS);
+  p(-1,-34,3,28,hair); p(19,-34,3,28,hair);
+  p(1,-46,20,5,hair); p(-1,-44,24,5,hair);
+  p(2,-46,4,10,hairH);
+  p(6,-41,5,5,C.iEyes); p(13,-41,5,5,C.iEyes);
+  p(6,-41,2,2,'#fff'); p(13,-41,2,2,'#fff');
+  p(5,-42,6,2,'#111'); p(12,-42,6,2,'#111');
+  p(8,-35,7,2,'#c05848');
+  ctx.restore();
+}
+
 function drawIlia() {
   drawIliaHair(ilia.hairBrown || false);
 }
