@@ -1072,6 +1072,7 @@ let l2 = {
   titleTimer: 180,
   // choice UI
   choiceVisible: false,
+  enterTimer: 0,
 };
 
 function initLevel2() {
@@ -1158,37 +1159,18 @@ function updateLevel2() {
   powerupPressed = false;
 
   // ── Camera ──
-  // Porta del tempio in coordinate mondo
-  const doorWorldL = l2.templeX + 70;
-  const doorWorldR = l2.templeX + 145;
-
-  let maxCam = lw - W;
-  if (!l2.templeEntered) {
-    // Camera permette a Carlo di raggiungere la porta (templeX + 145)
-    maxCam = Math.min(maxCam, l2.templeX + 200 - W * 0.35);
-  }
-
-  // Muro del tempio: blocca Carlo solo se NON è nella zona porta
-  if (!l2.templeEntered) {
-    const playerMid = player.x + player.w/2;
-    const atDoor = playerMid > doorWorldL && playerMid < doorWorldR;
-    if (!atDoor && player.x + player.w > l2.templeX) {
-      // Blocca al bordo sinistro del tempio
-      player.x = l2.templeX - player.w;
-      player.vx = 0;
-    }
-    // Se è nella zona porta, lascialo passare fino all'ingresso
-    if (atDoor && player.x + player.w > doorWorldR) {
-      l2.templeEntered = true;
-      player.x = 80; player.y = gy;
-      player.vx = 0; player.vy = 0;
-      camera = 0;
-    }
-  }
-
+  // Camera libera (nessun blocco artificiale)
   const targetCam = player.x - W * 0.35;
   camera += (targetCam - camera) * 0.1;
-  camera = Math.max(0, Math.min(camera, maxCam));
+  camera = Math.max(0, Math.min(camera, lw - W));
+
+  // Entrata tempio: quando player supera templeX entra automaticamente
+  if (!l2.templeEntered && player.x + player.w > l2.templeX + 80) {
+    l2.templeEntered = true;
+    player.x = 80; player.y = gy;
+    player.vx = 0; player.vy = 0;
+    camera = 0;
+  }
 
   // ── Serpente (dentro casa 1) ──
   if (!l2.house1Entered && player.x + player.w > l2.house1X + 30) {
@@ -1216,7 +1198,7 @@ function updateLevel2() {
     }
   }
 
-  // Entrata tempio gestita nel blocco muro sopra
+
 
   // ── Dentro tempio ──
   if (l2.templeEntered) {
@@ -1384,12 +1366,7 @@ function drawL2World(gy) {
   const tsx = Math.round(l2.templeX - camera);
   if (tsx < W+300 && tsx > -l2.templeW-50) drawL2TempleExterior(tsx, gy);
 
-  // Hint porta — in alto, ben visibile
-  if (player.x > l2.templeX - W*0.5) {
-    ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
-    if (Math.floor(Date.now()/500)%2===0) ctx.fillText('ENTRA DALLA PORTA', W/2, 110);
-    ctx.textAlign='left';
-  }
+
 
   // Particelle, Ilia, Carlo
   drawParticles();
