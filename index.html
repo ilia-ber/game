@@ -1158,15 +1158,26 @@ function updateLevel2() {
   powerupPressed = false;
 
   // ── Camera ──
+  // Porta del tempio in coordinate mondo
+  const doorWorldL = l2.templeX + Math.floor(l2.templeW/2) - 32;
+  const doorWorldR = l2.templeX + Math.floor(l2.templeW/2) + 32;
+
   let maxCam = lw - W;
-  // Se siamo fuori dal tempio, blocca la camera prima del tempio
   if (!l2.templeEntered) {
-    maxCam = Math.min(maxCam, l2.templeX - W * 0.45);
+    // Camera si ferma quando il player vede il tempio
+    maxCam = Math.min(maxCam, l2.templeX + Math.floor(l2.templeW/2) - W * 0.45);
   }
-  if (!l2.templeEntered && player.x + player.w > l2.templeX) {
-    player.x = l2.templeX - player.w;
-    player.vx = 0;
+
+  // Muro del tempio: blocca Carlo tranne che nella zona porta
+  if (!l2.templeEntered) {
+    const playerMid = player.x + player.w/2;
+    const atDoor = playerMid > doorWorldL && playerMid < doorWorldR;
+    if (!atDoor && player.x + player.w > l2.templeX + 20) {
+      player.x = l2.templeX + 20 - player.w;
+      player.vx = 0;
+    }
   }
+
   const targetCam = player.x - W * 0.35;
   camera += (targetCam - camera) * 0.1;
   camera = Math.max(0, Math.min(camera, maxCam));
@@ -1197,14 +1208,12 @@ function updateLevel2() {
     }
   }
 
-  // ── Entrata tempio: porta centrale ──
-  // La porta è al centro del tempio (templeX + templeW/2)
-  // Carlo deve avvicinarsi al muro (bloccato sopra) e premere avanti
-  // Quando è sulla porta (entro 40px dal centro) viene teletrasportato dentro
+  // ── Entrata tempio: Carlo cammina dentro la porta ──
   if (!l2.templeEntered) {
-    const doorCX = l2.templeX + Math.floor(l2.templeW / 2);
-    const distToDoor = Math.abs((player.x + player.w/2) - doorCX);
-    if (distToDoor < 50 && rightPressed) {
+    const playerMid = player.x + player.w/2;
+    const atDoor = playerMid > doorWorldL && playerMid < doorWorldR;
+    // Entra se è nella zona porta e si muove verso destra
+    if (atDoor && player.x + player.w > l2.templeX + 30) {
       l2.templeEntered = true;
       player.x = 80; player.y = gy;
       player.vx = 0; player.vy = 0;
@@ -1378,10 +1387,10 @@ function drawL2World(gy) {
   const tsx = Math.round(l2.templeX - camera);
   if (tsx < W+300 && tsx > -l2.templeW-50) drawL2TempleExterior(tsx, gy);
 
-  // Hint porta
-  if (player.x > l2.templeX - W*0.35) {
+  // Hint porta — in alto, ben visibile
+  if (player.x > l2.templeX - W*0.5) {
     ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
-    if (Math.floor(Date.now()/500)%2===0) ctx.fillText('▶ TIENI DESTRA SULLA PORTA ◀', W/2, gy-16);
+    if (Math.floor(Date.now()/500)%2===0) ctx.fillText('ENTRA DALLA PORTA', W/2, 110);
     ctx.textAlign='left';
   }
 
