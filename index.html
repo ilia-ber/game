@@ -1296,8 +1296,26 @@ function handleCultChoice() {
     l2.guruBallTimer = 0;
     shake = 12;
     spawnParticles(W*0.65, L2_GY()-80, '#ff4400', 30);
-
   }, 300);
+  // Dopo 5 secondi forza la fine del livello
+  setTimeout(() => {
+    if (state === 'playing' && level === 2) {
+      l2.guruBalls = [];
+      l2.guruState = 'done';
+      l2.templeEntered = false;
+      l2.winTriggered = true;
+      player.x = l2.templeX + l2.templeW + 80;
+      player.y = L2_GY();
+      ilia.x = player.x - 55;
+      ilia.y = L2_GY();
+      camera = Math.max(0, player.x - W * 0.4);
+      spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
+      setTimeout(() => {
+        document.getElementById('screenL2Win').classList.remove('hidden');
+        state = 'win2';
+      }, 800);
+    }
+  }, 5000);
 }
 
 // ── DRAW LIVELLO 2 ──────────────────────────────────────
