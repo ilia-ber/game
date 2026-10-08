@@ -1195,6 +1195,13 @@ function updateLevel2() {
     if (player.x < 20) player.x = 20;
     if (l2.guruState !== 'angry') {
       if (player.x + player.w > W - 20) player.x = W - player.w - 20;
+    } else {
+      // Guru arrabbiato: nessun muro, mostra posizione
+      if (player.x > W * 0.5) {
+        const d = document.getElementById('cultChoice');
+        // Debug: mostra stato su canvas (verrà disegnato nel render)
+        l2._debugX = Math.round(player.x);
+      }
     }
     // Ilia clamp
     ilia.x = Math.max(20, Math.min(ilia.x, W - 45));
@@ -1582,6 +1589,9 @@ function drawL2Temple(gy) {
     ctx.font='9px "Press Start 2P"'; ctx.fillStyle='#ff2222'; ctx.textAlign='center';
     if (Math.floor(Date.now()/300)%2===0) ctx.fillText('▶ SCAPPA A DESTRA! ▶',W/2,90);
     ctx.textAlign='left';
+    // Debug posizione
+    ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#ff0'; ctx.textAlign='left';
+    ctx.fillText('px:'+Math.round(player.x)+'/'+Math.round(W)+' guru:'+l2.guruState, 10, 115);
   }
 }
 
