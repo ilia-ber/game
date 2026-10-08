@@ -211,23 +211,70 @@ function initGame() {
   const guruTrigger = obstacles.find(o=>o.type==='guru_trigger' && o.active);
   const templeExit = obstacles.find(o=>o.type==='temple_exit' && o.active);
 
-  // Entra nel tempio quando supera house2X
-  if (!insideTemple && house2X > 0 && player.x > house2X + 60) {
-    insideTemple = true;
+  // ── Muro del tempio: blocca Carlo a sinistra della porta ──
+  if (house2X > 0 && !insideTemple) {
+    const wallX = house2X + 20; // bordo sinistro del tempio
+    if (player.x + player.w > wallX) {
+      player.x = wallX - player.w; // respingi
+      player.vx = 0;
+      camera = Math.max(0, Math.min(camera, house2X - W*0.5)); // blocca camera
+    }
   }
 
-  // Trigger guru dialog: quando è abbastanza dentro
-  if (insideTemple && guruState==='idle' && house2X > 0 && player.x > house2X + W*0.8) {
-    guruState = 'dialog';
-    guruTimer = 0;
-    guruDialogStep = 0;
-    showCultChoice = false;
+  // ── Porta: Carlo entra saltando nella porta (y bassa + x nella porta) ──
+  if (house2X > 0 && !insideTemple) {
+    const doorCX = house2X + Math.round(W * 2.2 * 0.5); // centro porta
+    const doorLeft = doorCX - 30;
+    const doorRight = doorCX + 30;
+    const doorTop = GROUND_Y() - 148; // top arco porta
+    if (player.x + player.w > doorLeft && player.x < doorRight && player.y - player.h < doorTop + 40) {
+      // Entra nel tempio: teletrasporto in stanza interna
+      insideTemple = true;
+      player.x = 80;
+      player.y = GROUND_Y();
+      player.vy = 0;
+      camera = 0;
+    }
+  }
+
+  // ── Dentro il tempio: stanza chiusa ──
+  if (insideTemple) {
+    // Pareti stanza (larghezza W, il player non può uscire dai bordi)
+    if (player.x < 20) player.x = 20;
+    if (player.x + player.w > W - 20) player.x = W - player.w - 20;
+
+    // Trigger guru dialog quando entra
+    if (guruState==='idle') {
+      guruState = 'dialog';
+      guruTimer = 0;
+      guruDialogStep = 0;
+      showCultChoice = false;
+    }
+
+    // Uscita: porta a sinistra (x < 60 e non arrabbiato o dopo aver scappato)
+    if (player.x < 50) {
+      if (guruState === 'angry') {
+        // Scappa! Livello completato
+        insideTemple = false;
+        guruBalls = [];
+        guruState = 'defeated';
+        spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
+        setTimeout(()=>{
+          document.getElementById('screenL2Win').classList.remove('hidden');
+          state='win2';
+        }, 800);
+      } else if (guruState === 'idle' || guruState === 'dialog') {
+        // Può uscire prima di parlare col guru
+        insideTemple = false;
+        player.x = house2X - 60;
+        camera = Math.max(0, player.x - W*0.4);
+      }
+    }
   }
 
   // Guru state machine
   if (guruState === 'dialog' || guruState === 'zoom') {
     guruTimer++;
-    // showCultChoice viene triggerato dai pulsanti HTML
   }
 
   if (guruState === 'angry') {
@@ -274,18 +321,7 @@ function initGame() {
     });
   }
 
-  // Uscita tempio → vittoria casa2
-  if (insideTemple && guruState==='angry' && player.x > templeExitX - 40) {
-    guruState = 'defeated';
-    guruBalls = [];
-    insideTemple = false;
-    templeExit.active = false;
-    spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
-    setTimeout(()=>{
-      document.getElementById('screenL2Win').classList.remove('hidden');
-      state='win2';
-    }, 800);
-  }
+
 
   updateHUD();
 }
@@ -804,27 +840,42 @@ function render() {
   ctx.clearRect(0,0,W,H);
   if (state==='cutscene') { drawCutscene(); return; }
   if (level===2) {
-    drawLevel2Background();
-    drawParticles();
-    drawSnake();
-    // Tempio e guru sempre visibili quando player è vicino
-    if (house2X > 0) {
-      const templeSx = Math.round(house2X - camera);
-      if (templeSx < W + 400 && templeSx > -400) {
-        drawTemple(templeSx, GROUND_Y());
+    if (!insideTemple) {
+      // ── FUORI: mondo normale ──
+      drawLevel2Background();
+      // Tempio come sfondo fisso quando vicini
+      if (house2X > 0) {
+        const templeSx = Math.round(house2X - camera);
+        if (templeSx < W + 200 && templeSx > -200) {
+          drawTemple(templeSx, GROUND_Y());
+        }
       }
-    }
-    drawGuruBalls();
-    drawIliaHair(true);
-    drawHealEffect();
-    drawCarlo();
-    drawLevelTitle();
-    // Freccia direzione se guru arrabbiato
-    if (guruState === 'angry') {
-      ctx.font='11px "Press Start 2P"'; ctx.fillStyle='#ff2222';
-      ctx.textAlign='center';
-      if (Math.floor(Date.now()/300)%2===0) ctx.fillText('▶▶ SCAPPA! ▶▶', W/2, 95);
-      ctx.textAlign='left';
+      drawParticles();
+      drawSnake();
+      drawIliaHair(true);
+      drawHealEffect();
+      drawCarlo();
+      drawLevelTitle();
+      // Hint porta tempio quando vicini
+      if (house2X > 0 && player.x > house2X - W*0.6) {
+        ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
+        if (Math.floor(Date.now()/500)%2===0) ctx.fillText('↑ SALTA NELLA PORTA ↑', W/2, H-170);
+        ctx.textAlign='left';
+      }
+    } else {
+      // ── DENTRO il tempio: stanza chiusa ──
+      drawTempleRoom();
+      drawGuruBalls();
+      drawParticles();
+      drawIliaHair(true);
+      drawHealEffect();
+      drawCarlo();
+      // Hint uscita se guru arrabbiato
+      if (guruState === 'angry') {
+        ctx.font='9px "Press Start 2P"'; ctx.fillStyle='#ff2222'; ctx.textAlign='center';
+        if (Math.floor(Date.now()/300)%2===0) ctx.fillText('◀ SCAPPA! ◀', W/2, 95);
+        ctx.textAlign='left';
+      }
     }
     return;
   }
@@ -956,8 +1007,9 @@ function drawHeartBubbles() {
   if (heartBubbles.length === 0) return;
   const t = Date.now() / 1000;
   // Centro testa di Carlo nel canvas (coordinata schermo)
-  const carloScreenX = Math.round(sc(player.x)) + 14;
-  const carloScreenY = Math.round(player.y - player.h) + 6; // centro testa
+  // Durante la cutscene il canvas è zoomato — usiamo W/2 come centro Carlo
+  const carloScreenX = Math.round(W * 0.38);
+  const carloScreenY = Math.round(H * 0.42);
 
   heartBubbles.forEach(b => {
     if (b.popped) return;
@@ -1248,10 +1300,12 @@ function updateLevel2() {
   } else player.frame=0;
   if (player.invincible>0) player.invincible--;
 
-  // ── Ilia follows Carlo ──
-  const targetIliaX = player.x - 55;
-  ilia.x += (targetIliaX - ilia.x) * 0.08;
-  ilia.y = gy;
+  // ── Ilia follows Carlo (solo fuori dal tempio) ──
+  if (!insideTemple) {
+    const targetIliaX = player.x - 55;
+    ilia.x += (targetIliaX - ilia.x) * 0.08;
+    ilia.y = gy;
+  }
 
   // ── Heal powerup ──
   if (powerupPressed && iliaHealCooldown===0 && energy<100) {
@@ -1516,6 +1570,64 @@ function drawHouse1(sx, gy) {
   }
 }
 
+
+
+// Stanza interna del tempio (schermo fisso)
+function drawTempleRoom() {
+  const gy = GROUND_Y();
+  // Sfondo stanza — pietra antica
+  const grad = ctx.createLinearGradient(0,0,0,gy);
+  grad.addColorStop(0,'#2a2520'); grad.addColorStop(0.5,'#3a3028'); grad.addColorStop(1,'#1a1510');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,gy);
+
+  // Pavimento
+  ctx.fillStyle='#5a5040'; ctx.fillRect(0,gy,W,H-gy);
+  ctx.fillStyle='#6a6050';
+  for(let tx=0;tx<W;tx+=48) ctx.fillRect(tx,gy,46,8);
+
+  // Muri laterali con colonne
+  ctx.fillStyle='#4a4035';
+  ctx.fillRect(0,0,30,gy); // muro sx
+  ctx.fillRect(W-30,0,30,gy); // muro dx
+  // Colonne decorative sui muri
+  [[20,'#5a5045'],[W-20,'#5a5045']].forEach(([cx,col])=>{
+    ctx.fillStyle=col;
+    ctx.fillRect(cx-10,gy*0.1,20,gy*0.85);
+    ctx.fillStyle='#6a6055';
+    ctx.fillRect(cx-16,gy*0.1,32,12); // capitello
+  });
+
+  // Porta uscita (sx, aperta)
+  ctx.fillStyle='#1a1208';
+  ctx.fillRect(30,gy-130,50,130);
+  ctx.beginPath(); ctx.arc(55,gy-130,25,Math.PI,0); ctx.fill();
+  // Luce che filtra dalla porta
+  const grd=ctx.createRadialGradient(55,gy-80,5,55,gy-80,80);
+  grd.addColorStop(0,'rgba(100,180,80,0.2)'); grd.addColorStop(1,'transparent');
+  ctx.fillStyle=grd; ctx.fillRect(0,gy-160,140,160);
+
+  // Torce sui muri
+  const torchFlicker = Math.sin(Date.now()/150)*0.3+0.7;
+  [[W*0.25, gy*0.3],[W*0.75, gy*0.3]].forEach(([tx,ty])=>{
+    ctx.fillStyle='#6a4020'; ctx.fillRect(tx-3,ty,6,20); // supporto
+    ctx.fillStyle=`rgba(255,160,30,${torchFlicker})`;
+    ctx.beginPath(); ctx.arc(tx,ty,12,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=`rgba(255,220,100,${torchFlicker*0.6})`;
+    ctx.beginPath(); ctx.arc(tx,ty,20,0,Math.PI*2); ctx.fill();
+  });
+
+  // Decorazioni murali (rune/simboli)
+  ctx.fillStyle='#6a5a40';
+  ctx.font='14px serif';
+  ctx.textAlign='center';
+  ['☽','✦','⊕','✦','☾'].forEach((sym,i)=>{
+    ctx.fillText(sym, W*0.15 + i*(W*0.7/4), gy*0.25);
+  });
+  ctx.textAlign='left';
+
+  // Guru (centro stanza)
+  drawGuru(W*0.65, gy);
+}
 
 function drawTemple(sx, gy) {
   const TW = Math.round(W * 2.2);
