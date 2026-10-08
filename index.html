@@ -1164,8 +1164,8 @@ function updateLevel2() {
 
   let maxCam = lw - W;
   if (!l2.templeEntered) {
-    // Camera si ferma quando il player vede il tempio
-    maxCam = Math.min(maxCam, l2.templeX + Math.floor(l2.templeW/2) - W * 0.45);
+    // Camera permette a Carlo di raggiungere la porta (templeX + 145)
+    maxCam = Math.min(maxCam, l2.templeX + 200 - W * 0.35);
   }
 
   // Muro del tempio: blocca Carlo solo se NON è nella zona porta
@@ -1383,12 +1383,6 @@ function drawL2World(gy) {
   // Tempio (muro che blocca)
   const tsx = Math.round(l2.templeX - camera);
   if (tsx < W+300 && tsx > -l2.templeW-50) drawL2TempleExterior(tsx, gy);
-
-  // DEBUG TEMPORANEO
-  ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#ff0'; ctx.textAlign='left';
-  ctx.fillText('px:'+Math.round(player.x)+' tX:'+Math.round(l2.templeX), 10, 130);
-  ctx.fillText('dL:'+Math.round(l2.templeX+70)+' dR:'+Math.round(l2.templeX+145), 10, 145);
-  ctx.fillText('cam:'+Math.round(camera)+' W:'+Math.round(W), 10, 160);
 
   // Hint porta — in alto, ben visibile
   if (player.x > l2.templeX - W*0.5) {
