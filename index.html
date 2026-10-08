@@ -1245,7 +1245,7 @@ function updateLevel2() {
     }
 
     // Uscita DESTRA quando guru è arrabbiato
-    if (l2.guruState === 'angry' && player.x + player.w > W - 10) {
+    if (l2.guruState === 'angry' && player.x > W * 0.85) {
       l2.templeEntered = false;
       l2.guruState = 'done';
       l2.guruBalls = [];
@@ -1275,6 +1275,7 @@ function handleGuruTap() {
   if (level !== 2 || !l2.templeEntered) return;
   if (l2.guruState === 'dialog') {
     if (l2.guruDialog < 1) { l2.guruDialog++; }
+    else if (l2.guruDialog < 2) { l2.guruDialog++; }
     else { l2.guruState = 'choice'; showCultChoiceUI(true); }
   }
 }
@@ -1627,9 +1628,10 @@ function drawL2Guru(gy) {
   if (!angry) {
     const dialogs=[
       'BENVENUTI! Questo e\' il\nCULTO DELLA COLLINA\nDI LIMBIATE',
-      'Dalla vostra eta\' e\nprestanza fisica...\nSareste OTTIMI ADEPTI!'
+      'Dalla vostra eta\' e\nprestanza fisica...\nSareste OTTIMI ADEPTI!',
+      'ACCETTATE DI ENTRARE\nNEL CULTO DELLA\nCOLLINA DI LIMBIATE?'
     ];
-    const txt = dialogs[l2.guruDialog] || dialogs[1];
+    const txt = dialogs[l2.guruDialog] || dialogs[2];
     if (l2.guruState==='dialog') {
       const bx=16,by=62,bw=W-32,bh=128;
       ctx.fillStyle='rgba(238,234,225,0.96)'; ctx.fillRect(bx,by,bw,bh);
