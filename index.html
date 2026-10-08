@@ -1258,7 +1258,7 @@ function updateLevel2() {
     }
 
     // Uscita DESTRA quando angry: cammina oltre W*1.8
-    if (l2.guruState === 'angry' && player.x > W * 1.2) {
+    if (l2.guruState === 'angry' && camera > W * 0.5) {
       l2.guruBalls = [];
       l2.guruState = 'done';
       l2.templeEntered = false;
@@ -1557,7 +1557,7 @@ function drawL2Temple(gy) {
     // Porta sx chiusa
     ctx.fillStyle='#2a1a0a'; ctx.fillRect(28,gy-128,52,128);
     // Porta uscita destra — disegnata in coordinate mondo (scorre con camera)
-    const exitScreenX = Math.round(W * 1.2 - camera);
+    const exitScreenX = Math.round(W * 0.8); // sempre a destra dello schermo
     if (exitScreenX > 0 && exitScreenX < W + 100) {
       // Porta aperta
       ctx.fillStyle='#0e0a06';
