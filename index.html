@@ -1143,11 +1143,9 @@ function updateLevel2() {
   } else player.frame = 0;
   if (player.invincible > 0) player.invincible--;
 
-  // ── Ilia segue (solo fuori dal tempio) ──
-  if (!l2.templeEntered) {
-    ilia.x += (player.x - 55 - ilia.x) * 0.08;
-    ilia.y = gy;
-  }
+  // ── Ilia segue Carlo sempre ──
+  ilia.x += (player.x - 55 - ilia.x) * 0.08;
+  ilia.y = gy;
 
   // ── Heal ──
   if (powerupPressed && l2.healCooldown === 0 && energy < 100) {
@@ -1167,8 +1165,9 @@ function updateLevel2() {
   // Entrata tempio: quando player supera templeX entra automaticamente
   if (!l2.templeEntered && player.x + player.w > l2.templeX + 80) {
     l2.templeEntered = true;
-    player.x = 80; player.y = gy;
+    player.x = 120; player.y = gy;
     player.vx = 0; player.vy = 0;
+    ilia.x = 75; ilia.y = gy;  // Ilia entra con Carlo
     camera = 0;
   }
 
@@ -1202,9 +1201,11 @@ function updateLevel2() {
 
   // ── Dentro tempio ──
   if (l2.templeEntered) {
-    // Muri stanza
+    // Muri stanza Carlo
     if (player.x < 20) player.x = 20;
     if (player.x + player.w > W - 20) player.x = W - player.w - 20;
+    // Ilia clamp
+    ilia.x = Math.max(20, Math.min(ilia.x, W - 45));
 
     // Guru dialog auto-start
     if (l2.guruState === 'idle') l2.guruState = 'dialog';
@@ -1242,12 +1243,13 @@ function updateLevel2() {
       });
     }
 
-    // Uscita dalla porta sinistra
-    if (player.x < 30 && l2.guruState === 'angry') {
+    // Uscita DESTRA quando guru è arrabbiato
+    if (l2.guruState === 'angry' && player.x + player.w > W - 10) {
       l2.templeEntered = false;
       l2.guruState = 'done';
       l2.guruBalls = [];
-      player.x = l2.templeX - 60;
+      player.x = l2.templeX + l2.templeW + 60;
+      ilia.x = player.x - 55;
       camera = Math.max(0, player.x - W * 0.4);
       spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
       setTimeout(()=>{
@@ -1255,10 +1257,11 @@ function updateLevel2() {
         state = 'win2';
       }, 800);
     }
-    // Può uscire anche prima di parlare col guru
+    // Uscita sinistra solo prima del dialogo
     if (player.x < 30 && (l2.guruState === 'idle' || l2.guruState === 'dialog')) {
       l2.templeEntered = false;
       player.x = l2.templeX - 60;
+      ilia.x = player.x - 55;
       camera = Math.max(0, player.x - W * 0.4);
     }
   }
@@ -1537,11 +1540,29 @@ function drawL2Temple(gy) {
   ['☽','✦','⊕','✦','☾'].forEach((s,i)=>ctx.fillText(s,W*0.15+i*(W*0.7/4),gy*0.22));
   ctx.textAlign='left';
   // Porta uscita sinistra
-  ctx.fillStyle='#0e0a06'; ctx.fillRect(28,gy-128,52,128);
-  ctx.beginPath(); ctx.arc(54,gy-128,26,Math.PI,0); ctx.fill();
-  const grd2=ctx.createRadialGradient(54,gy-70,4,54,gy-70,70);
-  grd2.addColorStop(0,'rgba(80,160,60,0.22)'); grd2.addColorStop(1,'transparent');
-  ctx.fillStyle=grd2; ctx.fillRect(0,gy-155,130,155);
+  if (l2.guruState === 'angry') {
+    // Porta bloccata dal guru arrabbiato — muro scuro
+    ctx.fillStyle='#2a1a0a'; ctx.fillRect(28,gy-128,52,128);
+    ctx.fillStyle='#ff2200'; ctx.font='7px "Press Start 2P"'; ctx.textAlign='center';
+    if (Math.floor(Date.now()/400)%2===0) ctx.fillText('BLOCCATA',54,gy-140);
+    ctx.textAlign='left';
+    // Uscita destra (muro aperto)
+    ctx.fillStyle='#0e0a06'; ctx.fillRect(W-80,gy-128,52,128);
+    ctx.beginPath(); ctx.arc(W-54,gy-128,26,Math.PI,0); ctx.fill();
+    const grdR=ctx.createRadialGradient(W-54,gy-70,4,W-54,gy-70,70);
+    grdR.addColorStop(0,'rgba(80,160,60,0.3)'); grdR.addColorStop(1,'transparent');
+    ctx.fillStyle=grdR; ctx.fillRect(W-130,gy-155,130,155);
+    ctx.fillStyle='#ffe066'; ctx.font='7px "Press Start 2P"'; ctx.textAlign='center';
+    if (Math.floor(Date.now()/400)%2===0) ctx.fillText('▶ SCAPPA!',W-54,gy-140);
+    ctx.textAlign='left';
+  } else {
+    // Porta aperta normale
+    ctx.fillStyle='#0e0a06'; ctx.fillRect(28,gy-128,52,128);
+    ctx.beginPath(); ctx.arc(54,gy-128,26,Math.PI,0); ctx.fill();
+    const grd2=ctx.createRadialGradient(54,gy-70,4,54,gy-70,70);
+    grd2.addColorStop(0,'rgba(80,160,60,0.22)'); grd2.addColorStop(1,'transparent');
+    ctx.fillStyle=grd2; ctx.fillRect(0,gy-155,130,155);
+  }
   // Guru
   drawL2Guru(gy);
   // Palle
@@ -1561,7 +1582,7 @@ function drawL2Temple(gy) {
   // Hint scappa
   if (l2.guruState==='angry') {
     ctx.font='9px "Press Start 2P"'; ctx.fillStyle='#ff2222'; ctx.textAlign='center';
-    if (Math.floor(Date.now()/300)%2===0) ctx.fillText('◀ SCAPPA DALLA PORTA! ◀',W/2,90);
+    if (Math.floor(Date.now()/300)%2===0) ctx.fillText('▶ SCAPPA A DESTRA! ▶',W/2,90);
     ctx.textAlign='left';
   }
 }
@@ -1570,9 +1591,12 @@ function drawL2Guru(gy) {
   if (l2.guruState==='idle') return;
   const angry = l2.guruState==='angry';
   const t = Date.now();
-  const bob = Math.sin(t/400)*3;
-  const scale = angry ? 1.55 : 1;
-  const gx = W*0.65, gy2=gy;
+  const bob = Math.sin(t/300)*5;
+  const scale = angry ? 1.7 : 1;
+  const gx = W*0.65;
+  // Guru vola in alto quando arrabbiato
+  const guruFloatY = angry ? Math.floor(gy * 0.45) + Math.sin(t/400)*12 : gy;
+  const gy2 = guruFloatY;
   ctx.save(); ctx.translate(Math.round(gx), Math.round(gy2)); ctx.scale(scale,scale);
   const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
   // Veste
