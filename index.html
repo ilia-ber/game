@@ -1219,9 +1219,9 @@ function updateLevel2() {
         const dx = (player.x + 14) - gx;
         const dy = (player.y - player.h/2) - gy2;
         const d  = Math.sqrt(dx*dx + dy*dy) || 1;
-        l2.guruBalls.push({ x: gx, y: gy2, vx: dx/d*4, vy: dy/d*4, life: 200, trail: [] });
+        l2.guruBalls.push({ x: gx, y: gy2, vx: dx/d*4, vy: dy/d*4, life: 140, trail: [] });
       }
-      l2.guruBalls = l2.guruBalls.filter(b => b.life > 0);
+      l2.guruBalls = l2.guruBalls.filter(b => b.life > 0 && b.x < W * 0.85);
       l2.guruBalls.forEach(b => {
         b.trail.push({x:b.x, y:b.y});
         if (b.trail.length > 7) b.trail.shift();
@@ -1245,7 +1245,7 @@ function updateLevel2() {
     }
 
     // Uscita DESTRA quando guru è arrabbiato
-    if (l2.guruState === 'angry' && player.x > W * 0.85) {
+    if (l2.guruState === 'angry' && l2.guruBallTimer > 60 && player.x > W * 0.88) {
       l2.templeEntered = false;
       l2.guruState = 'done';
       l2.guruBalls = [];
