@@ -97,6 +97,9 @@
   <h2>CARLO HA<br/>RAGGIUNTO<br/>ILIA!</h2>
   <button class="startBtn" id="btnNext" style="background:#2d7a27">CONTINUA ▶</button>
 </div>
+<div id="fuggiBtnWrapper" style="display:none;position:fixed;bottom:155px;left:0;right:0;z-index:40;text-align:center;">
+  <button onclick="fuggiTempio()" style="font-family:'Press Start 2P',monospace;font-size:10px;background:#2d7a27;color:#fff;border:3px solid #88ff44;padding:14px 28px;border-radius:4px;cursor:pointer;">▶ FUGGI! ▶</button>
+</div>
 <div id="cultChoice" style="display:none;position:fixed;bottom:160px;left:0;right:0;justify-content:center;gap:12px;z-index:30;padding:0 20px;">
   <button onclick="handleCultChoice()" style="font-family:'Press Start 2P',monospace;font-size:9px;background:#c0c0c0;color:#333;border:3px solid #888;padding:12px 16px;border-radius:4px;cursor:pointer;">NO</button>
   <button onclick="handleCultChoice()" style="font-family:'Press Start 2P',monospace;font-size:9px;background:#c0c0c0;color:#333;border:3px solid #888;padding:12px 16px;border-radius:4px;cursor:pointer;">HELL NO</button>
@@ -1098,6 +1101,7 @@ function initLevel2() {
   l2.titleTimer = 180;
   l2.choiceVisible = false;
   l2.winTriggered = false;
+  const fb = document.getElementById('fuggiBtnWrapper'); if(fb) fb.style.display='none';
 
   // Update button
   const em = document.getElementById('powerupEmoji');
@@ -1286,6 +1290,24 @@ function handleGuruTap() {
   }
 }
 
+function fuggiTempio() {
+  document.getElementById('fuggiBtnWrapper').style.display = 'none';
+  l2.guruBalls = [];
+  l2.guruState = 'done';
+  l2.templeEntered = false;
+  l2.winTriggered = true;
+  player.x = l2.templeX + l2.templeW + 80;
+  player.y = L2_GY();
+  ilia.x = player.x - 55;
+  ilia.y = L2_GY();
+  camera = Math.max(0, player.x - W * 0.4);
+  spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
+  setTimeout(()=>{
+    document.getElementById('screenL2Win').classList.remove('hidden');
+    state = 'win2';
+  }, 800);
+}
+
 function showCultChoiceUI(show) {
   l2.choiceVisible = show;
   const d = document.getElementById('cultChoice');
@@ -1296,13 +1318,14 @@ function showCultChoiceUI(show) {
 
 function handleCultChoice() {
   showCultChoiceUI(false);
+  l2.guruState = 'angry';
+  l2.guruBallTimer = 0;
+  shake = 12;
+  spawnParticles(W*0.65, L2_GY()-80, '#ff4400', 30);
+  // Mostra bottone fuga dopo 2 secondi
   setTimeout(() => {
-    l2.guruState = 'angry';
-    l2.guruBallTimer = 0;
-    shake = 12;
-    spawnParticles(W*0.65, L2_GY()-80, '#ff4400', 30);
-  }, 300);
-
+    document.getElementById('fuggiBtnWrapper').style.display = 'block';
+  }, 2000);
 }
 
 // ── DRAW LIVELLO 2 ──────────────────────────────────────
