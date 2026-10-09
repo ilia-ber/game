@@ -1253,10 +1253,13 @@ function updateLevel2() {
     }
 
 
-    // Auto-scroll battaglia
+    // Auto-scroll battaglia — Carlo avanza automaticamente
     if (l2.guruState === 'angry') {
       l2.battleTimer++;
       camera += 1.5;
+      // Sposta Carlo e Ilia automaticamente verso destra
+      player.x += 1.5;
+      ilia.x += 1.5;
       if (l2.battleTimer > 720) l2.doorVisible = true;
       if (l2.battleTimer > 900 && !l2.battleDone) {
         l2.battleDone = true;
@@ -1534,6 +1537,7 @@ function drawL2TempleExterior(sx, gy) {
 }
 
 function drawL2Temple(gy) {
+  const angry = l2.guruState==='angry' || l2.battleDone;
   // Stanza interna del tempio
   const grad=ctx.createLinearGradient(0,0,0,gy);
   grad.addColorStop(0,'#1e1a14'); grad.addColorStop(0.6,'#2a2418'); grad.addColorStop(1,'#181208');
@@ -1574,16 +1578,12 @@ function drawL2Temple(gy) {
     ctx.fillStyle=`rgba(255,150,30,${tf})`; ctx.beginPath(); ctx.arc(tx,gy*0.28,13,0,Math.PI*2); ctx.fill();
     ctx.fillStyle=`rgba(255,220,100,${tf*0.5})`; ctx.beginPath(); ctx.arc(tx,gy*0.28,22,0,Math.PI*2); ctx.fill();
   });
-  // Strisce muro che scorrono orizzontalmente
+  // Linee orizzontali sottili sul muro (solo se angry)
   if (angry) {
-    ctx.fillStyle='#252018';
-    const stripeOff = Math.round(camera % 60);
-    for(let sx2=28-stripeOff; sx2<W-28; sx2+=60) {
-      ctx.fillRect(sx2, 0, 30, gy);
+    ctx.strokeStyle='#2a2418'; ctx.lineWidth=1;
+    for(let sy=0; sy<gy; sy+=32) {
+      ctx.beginPath(); ctx.moveTo(28,sy); ctx.lineTo(W-28,sy); ctx.stroke();
     }
-    // Linee orizzontali sul muro
-    ctx.fillStyle='#1e1a12';
-    for(let sy=0; sy<gy; sy+=32) ctx.fillRect(28, sy, W-56, 2);
   }
 
   // Rune + crepe soffitto che scorrono
