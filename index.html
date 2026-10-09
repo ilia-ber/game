@@ -196,75 +196,6 @@ function initGame() {
 
   generateLevel();
   generateBg();
-  // ── Casa 3 ──
-  if (l2.house3X > 0) {
-    // Avvicinamento casa
-    if (l2.house3Phase === 'approach' && player.x > l2.house3X - W*0.5) {
-      l2.house3Phase = 'dialog';
-      l2.house3DialogStep = 0;
-    }
-
-    // Terremoto
-    if (l2.shakeTimer > 0) { l2.shakeTimer--; shake = 6; }
-
-    // Documenti lanciati
-    if (powerupPressed) {
-      if (l2.house3Phase === 'bank') {
-        powerupPressed = false;
-        l2.docs.push({ x: player.x + player.w, y: player.y - player.h/2, vx: 8, vy: -2, life: 120 });
-      } else if (l2.house3Phase === 'approach' || l2.house3Phase === 'dialog') {
-        // ancora bacio
-        if (l2.healCooldown === 0 && energy < 100) {
-          energy = Math.min(100, energy + 40);
-          l2.healCooldown = 180;
-          l2.healEffect = 90;
-          spawnParticles(ilia.x+11, ilia.y-30, '#ff88aa', 20);
-        }
-        powerupPressed = false;
-      }
-    }
-    l2.docs = l2.docs.filter(d => d.life > 0);
-    l2.docs.forEach(d => {
-      d.x += d.vx; d.y += d.vy; d.vy += 0.1; d.life--;
-      // Collisione banca
-      const bankScreenX = l2.house3X + 80;
-      if (d.x > bankScreenX - 30 && d.x < bankScreenX + 120 &&
-          d.y > gy - 200 && !l2.bankFlying) {
-        d.life = 0;
-        l2.bankHits++;
-        shake = 4;
-        spawnParticles(bankScreenX + 40, gy - 100, '#ffffff', 15);
-        if (l2.bankHits >= 5) {
-          l2.bankFlying = true;
-          spawnParticles(bankScreenX + 60, gy - 150, '#ffe066', 40);
-        }
-      }
-    });
-
-    // Banca vola via
-    if (l2.bankFlying) {
-      l2.bankY -= 4;
-      if (l2.bankY < -300 && l2.house3Phase === 'bank') {
-        l2.house3Phase = 'win';
-      }
-    }
-
-    // Muro banca blocca il player
-    if (l2.house3Phase === 'bank' && !l2.bankFlying) {
-      if (player.x + player.w > l2.house3X + 70) {
-        player.x = l2.house3X + 70 - player.w;
-      }
-    }
-
-    // Win: raggiungi la casa
-    if (l2.house3Phase === 'win' && player.x > l2.house3X + 180) {
-      l2.house3Phase = 'end';
-      setTimeout(() => {
-        document.getElementById('screenL2Win').classList.remove('hidden');
-        state = 'win2';
-      }, 1500);
-    }
-  }
   updateHUD();
 }
 
@@ -1518,11 +1449,6 @@ function drawL2World(gy) {
     ctx.textAlign='left'; ctx.restore();
   }
   drawCarlo();
-
-  // DEBUG
-  ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#ff0'; ctx.textAlign='left';
-  ctx.fillText('px:'+Math.round(player.x)+' h3:'+Math.round(l2.house3X)+' ph:'+l2.house3Phase, 10, 120);
-  ctx.fillText('trigger@'+(Math.round(l2.house3X - W*0.5)), 10, 135);
 
   // Titolo livello
   if (l2.titleTimer > 0) {
