@@ -1538,10 +1538,11 @@ function drawL2Temple(gy) {
   const grad=ctx.createLinearGradient(0,0,0,gy);
   grad.addColorStop(0,'#1e1a14'); grad.addColorStop(0.6,'#2a2418'); grad.addColorStop(1,'#181208');
   ctx.fillStyle=grad; ctx.fillRect(0,0,W,gy);
-  // Pavimento
+  // Pavimento con tile scorrevoli
+  const tileOff = angry ? Math.round(camera % 44) : 0;
   ctx.fillStyle='#4a4030'; ctx.fillRect(0,gy,W,8);
   ctx.fillStyle='#5a5040';
-  for(let tx=0;tx<W;tx+=44) ctx.fillRect(tx,gy,42,8);
+  for(let tx=-tileOff;tx<W+44;tx+=44) ctx.fillRect(tx,gy,42,8);
   ctx.fillStyle='#3a3020'; ctx.fillRect(0,gy+8,W,H-gy-8);
   // Muri con mattoni che scorrono (danno percezione movimento)
   const brickOffset = Math.floor(camera / 32) % 2; // mattoni scorrevoli
@@ -1573,6 +1574,18 @@ function drawL2Temple(gy) {
     ctx.fillStyle=`rgba(255,150,30,${tf})`; ctx.beginPath(); ctx.arc(tx,gy*0.28,13,0,Math.PI*2); ctx.fill();
     ctx.fillStyle=`rgba(255,220,100,${tf*0.5})`; ctx.beginPath(); ctx.arc(tx,gy*0.28,22,0,Math.PI*2); ctx.fill();
   });
+  // Strisce muro che scorrono orizzontalmente
+  if (angry) {
+    ctx.fillStyle='#252018';
+    const stripeOff = Math.round(camera % 60);
+    for(let sx2=28-stripeOff; sx2<W-28; sx2+=60) {
+      ctx.fillRect(sx2, 0, 30, gy);
+    }
+    // Linee orizzontali sul muro
+    ctx.fillStyle='#1e1a12';
+    for(let sy=0; sy<gy; sy+=32) ctx.fillRect(28, sy, W-56, 2);
+  }
+
   // Rune + crepe soffitto che scorrono
   ctx.fillStyle='#7a6a50'; ctx.font='15px serif'; ctx.textAlign='center';
   ['☽','✦','⊕','✦','☾'].forEach((s,i)=>ctx.fillText(s,W*0.15+i*(W*0.7/4),gy*0.18));
