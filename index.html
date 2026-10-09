@@ -1307,6 +1307,42 @@ function updateLevel2() {
     }
   }
 
+  // ── Casa 3 ──
+  if (l2.house3X > 0 && !l2.templeEntered) {
+    if (l2.house3Phase === 'approach' && player.x + player.w > l2.house3X - 50) {
+      l2.house3Phase = 'dialog';
+      l2.house3DialogStep = 0;
+    }
+    if (l2.shakeTimer > 0) { l2.shakeTimer--; shake = 6; }
+    if (powerupPressed && l2.house3Phase === 'bank') {
+      powerupPressed = false;
+      l2.docs.push({ x: player.x + player.w, y: L2_GY() - 40, vx: 9, vy: -1, life: 150 });
+    }
+    l2.docs = l2.docs.filter(d => d.life > 0);
+    l2.docs.forEach(d => {
+      d.x += d.vx; d.y += d.vy; d.vy += 0.08; d.life--;
+      if (d.x > l2.house3X + 60 && d.x < l2.house3X + 240 && !l2.bankFlying) {
+        d.life = 0; l2.bankHits++; shake = 4;
+        spawnParticles(Math.round(l2.house3X + 120 - camera), L2_GY() - 100, '#ffffff', 15);
+        if (l2.bankHits >= 5) { l2.bankFlying = true; }
+      }
+    });
+    if (l2.bankFlying) {
+      l2.bankY -= 5;
+      if (l2.bankY < -400) l2.house3Phase = 'win';
+    }
+    if (l2.house3Phase === 'bank' && !l2.bankFlying) {
+      if (player.x + player.w > l2.house3X + 60) player.x = l2.house3X + 60 - player.w;
+    }
+    if (l2.house3Phase === 'win' && player.x > l2.house3X + 200) {
+      l2.house3Phase = 'end';
+      setTimeout(() => {
+        document.getElementById('screenL2Win').classList.remove('hidden');
+        state = 'win2';
+      }, 1500);
+    }
+  }
+
   updateHUD();
 }
 
