@@ -113,6 +113,10 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx    = canvas.getContext('2d');
 
+// Background livello 1
+const bgImg = new Image();
+bgImg.src = 'bg_level1.gif';
+
 // W/H are plain variables, updated on resize
 let W = window.innerWidth;
 let H = window.innerHeight;
@@ -233,9 +237,23 @@ function r(x,y,w,h,col) { ctx.fillStyle=col; ctx.fillRect(Math.round(x),Math.rou
 const sc = (x) => x - camera + (shake?(Math.random()-0.5)*shake:0);
 
 function drawBackground() {
-  const grad = ctx.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'#05051a'); grad.addColorStop(0.6,'#1a1040'); grad.addColorStop(1,'#2a1a10');
-  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  // Background GIF livello 1 — ripetuto orizzontalmente con parallax
+  if (bgImg.complete && bgImg.naturalWidth > 0) {
+    const bgW = bgImg.naturalWidth;   // 272px
+    const bgH = bgImg.naturalHeight;
+    const bgScale = H / bgH;          // scala per riempire l'altezza
+    const bgDrawW = Math.ceil(bgW * bgScale);
+    const parallax = (camera * 0.3) % bgDrawW;
+    // Ripeti il bg orizzontalmente
+    for (let bx = -parallax; bx < W + bgDrawW; bx += bgDrawW) {
+      ctx.drawImage(bgImg, Math.round(bx), 0, bgDrawW, H);
+    }
+  } else {
+    // Fallback se immagine non caricata
+    const grad = ctx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0,'#05051a'); grad.addColorStop(0.6,'#1a1040'); grad.addColorStop(1,'#2a1a10');
+    ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  }
 
   const gy = GROUND_Y();
   if (!bgElements || !Array.isArray(bgElements)) return;
