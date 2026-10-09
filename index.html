@@ -1164,14 +1164,14 @@ function updateLevel2() {
 
   // Nessuna schermata vittoria — i personaggi escono e continuano
 
-  // ── Heal ──
-  if (powerupPressed && l2.healCooldown === 0 && energy < 100) {
+  // ── Heal (non durante battaglia banca) ──
+  if (powerupPressed && l2.healCooldown === 0 && energy < 100 && l2.house3Phase !== 'bank') {
     energy = Math.min(100, energy + 40);
     l2.healCooldown = 180;
     l2.healEffect = 90;
     spawnParticles(ilia.x+11, ilia.y-30, '#ff88aa', 20);
+    powerupPressed = false;
   }
-  powerupPressed = false;
 
   // ── Camera ──
   // Camera libera (nessun blocco artificiale)
