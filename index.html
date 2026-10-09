@@ -196,6 +196,66 @@ function initGame() {
 
   generateLevel();
   generateBg();
+  // ── Casa 3 ──
+  if (l2.house3X > 0 && l2.guruState === 'done') {
+    // Avvicinamento casa
+    if (l2.house3Phase === 'approach' && player.x > l2.house3X - W*0.5) {
+      l2.house3Phase = 'dialog';
+      l2.house3DialogStep = 0;
+    }
+
+    // Terremoto
+    if (l2.shakeTimer > 0) { l2.shakeTimer--; shake = 6; }
+
+    // Documenti lanciati
+    if (powerupPressed && l2.house3Phase === 'bank') {
+      powerupPressed = false;
+      l2.docs.push({ x: player.x + player.w, y: player.y - player.h/2, vx: 8, vy: -2, life: 120 });
+    }
+    l2.docs = l2.docs.filter(d => d.life > 0);
+    l2.docs.forEach(d => {
+      d.x += d.vx; d.y += d.vy; d.vy += 0.1; d.life--;
+      // Collisione banca
+      const bankScreenX = l2.house3X + 80;
+      if (d.x > bankScreenX - 30 && d.x < bankScreenX + 120 &&
+          d.y > gy - 200 && !l2.bankFlying) {
+        d.life = 0;
+        l2.bankHits++;
+        shake = 4;
+        spawnParticles(bankScreenX + 40, gy - 100, '#ffffff', 15);
+        if (l2.bankHits >= 5) {
+          l2.bankFlying = true;
+          spawnParticles(bankScreenX + 60, gy - 150, '#ffe066', 40);
+        }
+      }
+    });
+
+    // Banca vola via
+    if (l2.bankFlying) {
+      l2.bankY -= 4;
+      if (l2.bankY < -300 && l2.house3Phase === 'bank') {
+        l2.house3Phase = 'win';
+      }
+    }
+
+    // Muro banca blocca il player
+    if (l2.house3Phase === 'bank' && !l2.bankFlying) {
+      if (player.x + player.w > l2.house3X + 70) {
+        player.x = l2.house3X + 70 - player.w;
+      }
+    }
+
+    // Win: raggiungi la casa
+    if (l2.house3Phase === 'win' && player.x > l2.house3X + 180) {
+      l2.house3Phase = 'end';
+      setTimeout(() => {
+        document.getElementById('screenL2Win').classList.remove('hidden');
+        state = 'win2';
+      }, 1500);
+    }
+  }
+  powerupPressed = false;
+
   updateHUD();
 }
 
@@ -1067,6 +1127,15 @@ let l2 = {
   battleTimer: 0,
   battleDone: false,
   doorVisible: false,
+  // Casa 3
+  house3X: 0,
+  house3Phase: 'approach', // approach | dialog | bank | win
+  house3DialogStep: 0,
+  bankHits: 0,
+  bankY: 0,          // posizione Y banca (vola via)
+  bankFlying: false,
+  docs: [],           // documenti lanciati
+  shakeTimer: 0,
 };
 
 function initLevel2() {
@@ -1104,12 +1173,20 @@ function initLevel2() {
   l2.battleTimer = 0;
   l2.battleDone = false;
   l2.doorVisible = false;
+  l2.house3X = 0;
+  l2.house3Phase = 'approach';
+  l2.house3DialogStep = 0;
+  l2.bankHits = 0;
+  l2.bankY = 0;
+  l2.bankFlying = false;
+  l2.docs = [];
+  l2.shakeTimer = 0;
 
   // Update button
   const em = document.getElementById('powerupEmoji');
   const hl = document.getElementById('healLabel');
-  if (em) em.textContent = '💋';
-  if (hl) hl.textContent = 'BACIO';
+  if (em) em.textContent = '📄';
+  if (hl) hl.textContent = 'DOC';
   updateHUD();
 }
 
@@ -1220,7 +1297,7 @@ function updateLevel2() {
     // Palle guru
     if (l2.guruState === 'angry') {
       l2.guruBallTimer++;
-      if (l2.guruBallTimer % 55 === 0 && l2.guruBalls.length < 6) {
+      if (l2.guruBallTimer % 28 === 0 && l2.guruBalls.length < 12) {
         // Posizione guru nel mondo quando angry
       const guruWorldX = (l2.guruState==='angry') ? player.x + 80 : W*0.65;
       const gx = guruWorldX, gy2 = gy - 100;
@@ -1295,6 +1372,23 @@ function updateLevel2() {
 
 // tap canvas per guru dialog
 function handleGuruTap() {
+  // Dialog casa 3
+  if (level === 2 && l2.house3Phase === 'dialog') {
+    if (l2.house3DialogStep < 2) {
+      l2.house3DialogStep++;
+    } else {
+      // Terremoto! Appare la banca
+      l2.house3Phase = 'bank';
+      l2.shakeTimer = 60;
+      l2.bankY = 0;
+      // Aggiorna bottone a documenti
+      const em = document.getElementById('powerupEmoji');
+      const hl = document.getElementById('healLabel');
+      if (em) em.textContent = '📄';
+      if (hl) hl.textContent = 'DOC';
+    }
+    return;
+  }
   if (level !== 2 || !l2.templeEntered) return;
   if (l2.guruState === 'dialog') {
     if (l2.guruDialog < 1) { l2.guruDialog++; }
@@ -1363,6 +1457,12 @@ function drawL2World(gy) {
     ctx.moveTo(sx,by); ctx.quadraticCurveTo(sx+8,by-wing,sx+16,by);
     ctx.stroke();
   });
+
+  // Casa 3 (bianca e luminosa)
+  if (l2.house3X > 0) {
+    const h3sx = Math.round(l2.house3X - camera);
+    if (h3sx > -400 && h3sx < W+400) drawL2House3(h3sx, gy);
+  }
 
   // Terreno
   ctx.fillStyle='#5a8a30'; ctx.fillRect(0,gy,W,8);
@@ -1449,6 +1549,97 @@ function drawL2House1(sx, gy) {
     if (Math.floor(Date.now()/400)%2===0) {
       ctx.font='9px "Press Start 2P"'; ctx.fillStyle='#ff2222'; ctx.textAlign='center';
       ctx.fillText('⚠ SCAPPA! ⚠', sx+110, gy-240); ctx.textAlign='left';
+    }
+  }
+}
+
+function drawL2House3(sx, gy) {
+  // Casa bianca luminosa (abbozzata)
+  const hw = 260, hh = 200;
+  // Aureola luminosa attorno alla casa
+  const grd = ctx.createRadialGradient(sx+hw/2, gy-hh/2, 20, sx+hw/2, gy-hh/2, 180);
+  grd.addColorStop(0,'rgba(255,255,240,0.3)'); grd.addColorStop(1,'transparent');
+  ctx.fillStyle=grd; ctx.fillRect(sx-50,gy-hh-80,hw+100,hh+80);
+  // Muri
+  ctx.fillStyle='#f5f5f0'; ctx.fillRect(sx, gy-hh, hw, hh);
+  // Tetto
+  ctx.fillStyle='#e8e0d0';
+  ctx.beginPath(); ctx.moveTo(sx-15,gy-hh); ctx.lineTo(sx+hw/2,gy-hh-70); ctx.lineTo(sx+hw+15,gy-hh); ctx.closePath(); ctx.fill();
+  // Finestre luminose
+  ctx.fillStyle='#fffde0';
+  ctx.fillRect(sx+30,gy-150,50,40); ctx.fillRect(sx+hw-80,gy-150,50,40);
+  ctx.fillRect(sx+hw/2-25,gy-150,50,40);
+  ctx.strokeStyle='#ccc'; ctx.lineWidth=2;
+  ctx.strokeRect(sx+30,gy-150,50,40); ctx.strokeRect(sx+hw-80,gy-150,50,40);
+  ctx.strokeRect(sx+hw/2-25,gy-150,50,40);
+  // Porta
+  ctx.fillStyle='#d4a060'; ctx.fillRect(sx+hw/2-20,gy-80,40,80);
+  ctx.fillStyle='#b88040'; ctx.fillRect(sx+hw/2+5,gy-50,8,8);
+  // Giardino
+  ctx.fillStyle='#4a9a30';
+  for(let gi=0;gi<8;gi++) { ctx.fillRect(sx-20+gi*40,gy-20,12,20); ctx.fillRect(sx-16+gi*40,gy-28,8,10); }
+
+  // Dialog casa 3
+  if (l2.house3Phase === 'dialog') {
+    const dialogs = [
+      {who:'CARLO', text:'Vedi anche tu quello\nche vedo io?'},
+      {who:'ILIA',  text:'Certo! Siamo arrivati\nalla nostra casa!'},
+      {who:'CARLO', text:'....ma che cosa??'},
+    ];
+    const dlg = dialogs[l2.house3DialogStep];
+    if (dlg) {
+      const bx=16, by=62, bw=W-32, bh=110;
+      ctx.fillStyle='rgba(0,0,10,0.92)'; ctx.fillRect(bx,by,bw,bh);
+      ctx.strokeStyle='#ffe066'; ctx.lineWidth=2; ctx.strokeRect(bx,by,bw,bh);
+      ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ffe066';
+      ctx.fillText(dlg.who+':', bx+12, by+22);
+      ctx.fillStyle='#fff';
+      dlg.text.split('\n').forEach((line,i) => ctx.fillText(line, bx+12, by+46+i*24));
+      if (Math.floor(Date.now()/450)%2===0) {
+        ctx.font='6px "Press Start 2P"'; ctx.fillStyle='#888';
+        ctx.textAlign='right'; ctx.fillText('tocca ▶', bx+bw-10, by+bh-10); ctx.textAlign='left';
+      }
+    }
+  }
+
+  // Banca villain
+  if (l2.house3Phase === 'bank' || l2.house3Phase === 'win') {
+    const bankY2 = gy - 180 + (l2.bankY || 0);
+    const bsx = sx + 80;
+    // Corpo banca (rettangolo grigio istituzionale)
+    ctx.fillStyle='#888898'; ctx.fillRect(bsx, bankY2, 160, 180);
+    ctx.fillStyle='#9999aa'; ctx.fillRect(bsx, bankY2, 160, 20); // tetto
+    // Colonne
+    ctx.fillStyle='#aaaabc';
+    [20,55,90,125].forEach(cx2 => { ctx.fillRect(bsx+cx2, bankY2+20, 15, 140); });
+    // Scritta BANCA
+    ctx.font='11px "Press Start 2P"'; ctx.fillStyle='#333'; ctx.textAlign='center';
+    ctx.fillText('BANCA', bsx+80, bankY2+100);
+    ctx.textAlign='left';
+    // Occhi cattivi
+    ctx.fillStyle='#ff2200';
+    ctx.fillRect(bsx+40, bankY2+40, 20, 15); ctx.fillRect(bsx+100, bankY2+40, 20, 15);
+    // Barra vita
+    if (!l2.bankFlying) {
+      ctx.fillStyle='#333'; ctx.fillRect(bsx, bankY2-20, 160, 10);
+      ctx.fillStyle='#ff4444'; ctx.fillRect(bsx, bankY2-20, 160*(1-l2.bankHits/5), 10);
+      ctx.font='6px "Press Start 2P"'; ctx.fillStyle='#fff'; ctx.textAlign='center';
+      ctx.fillText('DOCUMENTI: '+l2.bankHits+'/5', bsx+80, bankY2-24); ctx.textAlign='left';
+    }
+    // Documenti in volo
+    l2.docs.forEach(d => {
+      const dsx = Math.round(d.x - camera);
+      ctx.fillStyle='#fff';
+      ctx.fillRect(dsx-8, Math.round(d.y)-10, 16, 20);
+      ctx.strokeStyle='#aaa'; ctx.lineWidth=1; ctx.strokeRect(dsx-8, Math.round(d.y)-10, 16, 20);
+      ctx.fillStyle='#88aaff';
+      for(let li=0;li<3;li++) ctx.fillRect(dsx-5, Math.round(d.y)-6+li*5, 10, 2);
+    });
+    // Hint
+    if (!l2.bankFlying) {
+      ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
+      if (Math.floor(Date.now()/500)%2===0) ctx.fillText('📄 LANCIA DOCUMENTI!', W/2, 110);
+      ctx.textAlign='left';
     }
   }
 }
