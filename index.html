@@ -1145,15 +1145,7 @@ function updateLevel2() {
   ilia.x += (player.x - 55 - ilia.x) * 0.08;
   ilia.y = gy;
 
-  // ── Win dopo fuga dal tempio ──
-  if (l2.guruState === 'done' && !l2.templeEntered && !l2.winTriggered) {
-    l2.winTriggered = true;
-    spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
-    setTimeout(()=>{
-      document.getElementById('screenL2Win').classList.remove('hidden');
-      state = 'win2';
-    }, 1200);
-  }
+  // Nessuna schermata vittoria — i personaggi escono e continuano
 
   // ── Heal ──
   if (powerupPressed && l2.healCooldown === 0 && energy < 100) {
@@ -1282,7 +1274,7 @@ function updateLevel2() {
         ilia.x = player.x - 55;
         ilia.y = L2_GY();
         camera = Math.max(0, player.x - W * 0.4);
-        spawnParticles(player.x+14, player.y-20, '#ffe066', 40);
+        spawnParticles(player.x+14, player.y-20, '#ffe066', 60);
       }
     }
 
