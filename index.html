@@ -1519,6 +1519,11 @@ function drawL2World(gy) {
   }
   drawCarlo();
 
+  // DEBUG
+  ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#ff0'; ctx.textAlign='left';
+  ctx.fillText('px:'+Math.round(player.x)+' h3:'+Math.round(l2.house3X)+' ph:'+l2.house3Phase, 10, 120);
+  ctx.fillText('trigger@'+(Math.round(l2.house3X - W*0.5)), 10, 135);
+
   // Titolo livello
   if (l2.titleTimer > 0) {
     const alpha = Math.min(1, l2.titleTimer/30);
