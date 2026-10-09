@@ -1547,17 +1547,14 @@ function drawL2Temple(gy) {
   const brickOffset = Math.floor(camera / 32) % 2; // mattoni scorrevoli
   ctx.fillStyle='#3a3428';
   ctx.fillRect(0,0,28,gy); ctx.fillRect(W-28,0,28,gy);
-  // Pattern mattoni sui muri
-  ctx.fillStyle='#2a2418';
-  for(let by=0; by<gy; by+=24) {
-    const offset = ((by/24|0) + brickOffset) % 2 === 0 ? 0 : 12;
-    ctx.fillRect(2, by, 24, 2); // linea orizzontale
+  // Pattern mattoni sx (solo se colonna visibile)
+  if (colLeftX > -28) {
+    ctx.fillStyle='#2a2418';
+    for(let by=0; by<gy; by+=24) {
+      ctx.fillRect(colLeftX+2, by, 24, 2);
+    }
   }
-  for(let by=0; by<gy; by+=24) {
-    const offset2 = ((by/24|0)) % 2 === 0 ? 8 : 20;
-    ctx.fillRect(offset2%28, by, 2, 22); // linea verticale
-  }
-  // Stessa cosa sul muro dx
+  // Pattern mattoni dx
   ctx.fillStyle='#2a2418';
   for(let by=0; by<gy; by+=24) {
     ctx.fillRect(W-26, by, 24, 2);
