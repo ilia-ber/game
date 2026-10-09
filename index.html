@@ -1168,7 +1168,7 @@ function updateLevel2() {
   // quando angry: camera gestita dall'auto-scroll sopra
 
   // Entrata tempio: quando player supera templeX entra automaticamente
-  if (!l2.templeEntered && player.x + player.w > l2.templeX + 80) {
+  if (!l2.templeEntered && !l2.winTriggered && player.x + player.w > l2.templeX + 80) {
     l2.templeEntered = true;
     player.x = 120; player.y = gy;
     player.vx = 0; player.vy = 0;
