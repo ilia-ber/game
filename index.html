@@ -197,7 +197,7 @@ function initGame() {
   generateLevel();
   generateBg();
   // ── Casa 3 ──
-  if (l2.house3X > 0 && l2.guruState === 'done') {
+  if (l2.house3X > 0) {
     // Avvicinamento casa
     if (l2.house3Phase === 'approach' && player.x > l2.house3X - W*0.5) {
       l2.house3Phase = 'dialog';
@@ -208,9 +208,20 @@ function initGame() {
     if (l2.shakeTimer > 0) { l2.shakeTimer--; shake = 6; }
 
     // Documenti lanciati
-    if (powerupPressed && l2.house3Phase === 'bank') {
-      powerupPressed = false;
-      l2.docs.push({ x: player.x + player.w, y: player.y - player.h/2, vx: 8, vy: -2, life: 120 });
+    if (powerupPressed) {
+      if (l2.house3Phase === 'bank') {
+        powerupPressed = false;
+        l2.docs.push({ x: player.x + player.w, y: player.y - player.h/2, vx: 8, vy: -2, life: 120 });
+      } else if (l2.house3Phase === 'approach' || l2.house3Phase === 'dialog') {
+        // ancora bacio
+        if (l2.healCooldown === 0 && energy < 100) {
+          energy = Math.min(100, energy + 40);
+          l2.healCooldown = 180;
+          l2.healEffect = 90;
+          spawnParticles(ilia.x+11, ilia.y-30, '#ff88aa', 20);
+        }
+        powerupPressed = false;
+      }
     }
     l2.docs = l2.docs.filter(d => d.life > 0);
     l2.docs.forEach(d => {
@@ -254,8 +265,6 @@ function initGame() {
       }, 1500);
     }
   }
-  powerupPressed = false;
-
   updateHUD();
 }
 
@@ -1185,8 +1194,8 @@ function initLevel2() {
   // Update button
   const em = document.getElementById('powerupEmoji');
   const hl = document.getElementById('healLabel');
-  if (em) em.textContent = '📄';
-  if (hl) hl.textContent = 'DOC';
+  if (em) em.textContent = '💋';
+  if (hl) hl.textContent = 'BACIO';
   updateHUD();
 }
 
@@ -1381,11 +1390,11 @@ function handleGuruTap() {
       l2.house3Phase = 'bank';
       l2.shakeTimer = 60;
       l2.bankY = 0;
-      // Aggiorna bottone a documenti
-      const em = document.getElementById('powerupEmoji');
-      const hl = document.getElementById('healLabel');
-      if (em) em.textContent = '📄';
-      if (hl) hl.textContent = 'DOC';
+      // Solo ora cambia il bottone a documenti
+      const emB = document.getElementById('powerupEmoji');
+      const hlB = document.getElementById('healLabel');
+      if (emB) emB.textContent = '📄';
+      if (hlB) hlB.textContent = 'DOC';
     }
     return;
   }
