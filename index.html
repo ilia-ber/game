@@ -2147,12 +2147,18 @@ function chooseL3Bonus(choice) {
   const _ui = document.getElementById('l3choiceUI'); if(_ui) _ui.style.display = 'none';
   l3.chosenBonus = choice;
   l3.choiceDone = true;
-  // Bonus appare in posizione random nella stanza
   const room = L3_ROOMS[l3.room];
+  // Salva l'obj fisso in placedObjects e azzera l3.obj
+  if (l3.obj) {
+    l3.placedObjects.push({emoji:l3.obj.def.emoji, x:l3.obj.x, y:l3.obj.y, w:l3.obj.def.w, h:l3.obj.def.h});
+    l3.obj = null;
+  }
+  // Crea il bonus in posizione random e salvalo subito
   const bx = 20 + Math.random()*(room.w-60);
   const by = 20 + Math.random()*(room.h-60);
-  l3.bonusObj = { emoji: choice.emoji, x: Math.round(bx), y: Math.round(by), w:32, h:32 };
-  // Salva subito e passa a waiting_next
+  const bonus = { emoji: choice.emoji, x: Math.round(bx), y: Math.round(by), w:32, h:32 };
+  l3.placedObjects.push(bonus);
+  l3.bonusObj = null; // non usato separatamente
   l3.phase = 'waiting_next';
   l3.iliaDialog = 'Ottima scelta!\nTocca per continuare';
   l3.iliaDialogTimer = 999;
