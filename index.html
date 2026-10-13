@@ -149,6 +149,7 @@ const imgCarloTop   = new Image(); imgCarloTop.src   = 'carlo_top_down.png';
 const imgIliaPink   = new Image(); imgIliaPink.src   = 'ilia_pink.png';
 const imgIliaBrown  = new Image(); imgIliaBrown.src  = 'ilia_brown.png';
 const imgIliaTop    = new Image(); imgIliaTop.src    = 'ilia_top_down.png';
+const imgIliaRun    = new Image(); imgIliaRun.src    = 'ilia_run.png';
 
 function drawSprite(img, x, y, w, h, flipX) {
   if (!img.complete || img.naturalWidth === 0) return false;
@@ -382,12 +383,12 @@ function drawBackground() {
 function drawCarlo() {
   const sx = Math.round(sc(player.x));
   const sy = Math.round(player.y - player.h);
-  const w = player.w + 8;
-  const h = player.h + 4;
+  const w = (player.w + 8) * 2;
+  const h = (player.h + 4) * 2;
   const moving = Math.abs(player.vx) > 0.5;
   const img = moving ? imgCarloRun : imgCarloIdle;
   const flip = player.facing < 0;
-  if (!drawSprite(img, sx - 4, sy - 4, w, h, flip)) {
+  if (!drawSprite(img, sx - w/2 + player.w/2, Math.round(player.y) - h, w, h, flip)) {
     // fallback blocchetti
     const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
     ctx.save(); ctx.translate(sx, Math.round(player.y));
@@ -401,10 +402,11 @@ function drawCarlo() {
 function drawIliaHair(brown) {
   const sx = Math.round(sc(ilia.x));
   const sy = Math.round(ilia.y - ilia.h - 4);
-  const w = 28;
-  const h = 52;
-  const img = brown ? imgIliaBrown : imgIliaPink;
-  if (!drawSprite(img, sx - 4, sy, w, h, false)) {
+  const w = 48;
+  const h = 96;
+  const iliaMoving = Math.abs(ilia.x - (player.x - 55)) > 3;
+  const img = iliaMoving ? imgIliaRun : (brown ? imgIliaBrown : imgIliaPink);
+  if (!drawSprite(img, sx - 12, Math.round(ilia.y) - h, w, h, false)) {
     // fallback
     const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
     const hair = brown ? '#8b5a2b' : '#f070b0';
