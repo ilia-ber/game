@@ -83,19 +83,14 @@
     </div>
   </div>
   <!-- D-pad livello 3 -->
-  <div id="ctrlL3" style="display:none;align-items:center;justify-content:center;width:100%;gap:20px;">
-    <div style="display:grid;grid-template-columns:52px 52px 52px;grid-template-rows:52px 52px 52px;gap:4px;">
-      <div></div>
-      <div class="ctrlBtn" id="btnUp" style="display:flex;">▲</div>
-      <div></div>
-      <div class="ctrlBtn" id="btnLeft2" style="display:flex;">◀</div>
-      <div style="width:52px;height:52px;"></div>
-      <div class="ctrlBtn" id="btnRight2" style="display:flex;">▶</div>
-      <div></div>
-      <div class="ctrlBtn" id="btnDown" style="display:flex;">▼</div>
-      <div></div>
+  <div id="ctrlL3" style="display:none;align-items:center;justify-content:center;width:100%;gap:16px;">
+    <div style="position:relative;width:120px;height:120px;">
+      <div class="ctrlBtn" id="btnUp"     style="position:absolute;top:0;left:35px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">▲</div>
+      <div class="ctrlBtn" id="btnLeft2"  style="position:absolute;top:35px;left:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">◀</div>
+      <div class="ctrlBtn" id="btnRight2" style="position:absolute;top:35px;right:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">▶</div>
+      <div class="ctrlBtn" id="btnDown"   style="position:absolute;bottom:0;left:35px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">▼</div>
     </div>
-    <div class="ctrlBtn" id="btnPowerupL3"><span id="powerupEmojiL3">🔄</span><span style="font-size:7px;display:block">RESET</span></div>
+    <div class="ctrlBtn" id="btnPowerupL3" style="width:52px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;"><span id="powerupEmojiL3">🔄</span><span style="font-size:6px;">RESET</span></div>
   </div>
 </div>
 
@@ -181,6 +176,7 @@ let levelComplete=false, powerupCooldown=0, shake=0, callEffectTimer=0;
 let player={x:0,y:0,w:28,h:48,vx:0,vy:0,onGround:false,frame:0,frameTimer:0,facing:1,invincible:0};
 let ilia={x:9999,y:0,w:22,h:38,frame:0,frameTimer:0};
 let leftPressed=false, rightPressed=false, jumpPressed=false, powerupPressed=false;
+let upPressed=false, downPressed=false;
 
 // ── CUTSCENE STATE ────────────────────────────────────
 let cutscene = {
@@ -815,15 +811,26 @@ function loop() { update(); render(); requestAnimationFrame(loop); }
 
 // ── CONTROLS ──────────────────────────────────────────
 function hold(el,down,up) {
-  el.addEventListener('touchstart',e=>{e.preventDefault();down();},{passive:false});
-  el.addEventListener('touchend',  e=>{e.preventDefault();up();  },{passive:false});
-  el.addEventListener('mousedown', down);
-  el.addEventListener('mouseup',   up);
+  if (!el) return;
+  el.addEventListener('touchstart', e=>{e.preventDefault();down();},{passive:false});
+  el.addEventListener('touchend',   e=>{e.preventDefault();up();  },{passive:false});
+  el.addEventListener('touchcancel',e=>{e.preventDefault();up();  },{passive:false});
+  el.addEventListener('mousedown',  e=>{e.preventDefault();down();});
+  el.addEventListener('mouseup',    e=>{up();});
+  el.addEventListener('mouseleave', e=>{up();});
 }
 hold(document.getElementById('btnLeft'),  ()=>leftPressed=true,  ()=>leftPressed=false);
 hold(document.getElementById('btnRight'), ()=>rightPressed=true, ()=>rightPressed=false);
-hold(document.getElementById('btnJump'),  ()=>jumpPressed=true,  ()=>{});
+hold(document.getElementById('btnJump'),  ()=>jumpPressed=true,  ()=>jumpPressed=false);
 hold(document.getElementById('btnPowerup'),()=>powerupPressed=true,()=>powerupPressed=false);
+// L3 D-pad
+hold(document.getElementById('btnUp'),    ()=>upPressed=true,    ()=>upPressed=false);
+hold(document.getElementById('btnDown'),  ()=>downPressed=true,  ()=>downPressed=false);
+hold(document.getElementById('btnLeft2'), ()=>leftPressed=true,  ()=>leftPressed=false);
+hold(document.getElementById('btnRight2'),()=>rightPressed=true, ()=>rightPressed=false);
+document.getElementById('btnPowerupL3').addEventListener('touchstart', e=>{e.preventDefault();powerupPressed=true;});
+document.getElementById('btnPowerupL3').addEventListener('touchend',   ()=>powerupPressed=false);
+document.getElementById('btnPowerupL3').addEventListener('click',      ()=>{powerupPressed=true;});
 
 window.addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft')  leftPressed=true;
@@ -2156,8 +2163,7 @@ function chooseObj(choice) {
   loadNextObj();
 }
 
-// Controllo su/giù per top-down
-let upPressed = false, downPressed = false;
+// Controllo su/giù per top-down (upPressed/downPressed già dichiarate nel main script)
 window.addEventListener('keydown', e => {
   if (e.key === 'ArrowUp')   upPressed = true;
   if (e.key === 'ArrowDown') downPressed = true;
@@ -2311,6 +2317,9 @@ function drawLevel3() {
     }
   }
 
+  // DEBUG frecce
+  ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ff0'; ctx.textAlign='left';
+  ctx.fillText('U:'+upPressed+' D:'+downPressed+' L:'+leftPressed+' R:'+rightPressed, 10, 120);
   // ── HINT TESTO ──
   if (l3.phase==='push' && l3.iliaDialogTimer===0) {
     ctx.font='6px "Press Start 2P"'; ctx.textAlign='center';
