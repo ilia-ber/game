@@ -1999,7 +1999,7 @@ function initL3Room(roomIdx) {
     placed: false,
   };
 
-  document.getElementById('l3choiceUI').style.display = 'none';
+  const _ui = document.getElementById('l3choiceUI'); if(_ui) _ui.style.display = 'none';
 }
 
 function resetL3Room() {
@@ -2018,8 +2018,8 @@ function updateLevel3() {
   let dx = 0, dy = 0;
   if (leftPressed)  dx = -speed;
   if (rightPressed) dx =  speed;
-  if (jumpPressed || upPressed) dy = -speed;
-  if (downPressed)  dy =  speed;
+  if (upPressed)   dy = -speed;
+  if (downPressed) dy =  speed;
 
   // Spinge oggetto se vicino
   if (l3.phase === 'push' && l3.obj && !l3.obj.placed) {
@@ -2078,6 +2078,7 @@ function showL3Choices() {
   const choices = L3_BONUS_CHOICES[l3.room];
   const ui = document.getElementById('l3choiceUI');
   const btns = document.getElementById('l3choiceBtns');
+  if (!ui || !btns) return;
   btns.innerHTML = '';
   choices.forEach((ch, i) => {
     const btn = document.createElement('button');
@@ -2091,7 +2092,7 @@ function showL3Choices() {
 }
 
 function chooseL3Bonus(choice) {
-  document.getElementById('l3choiceUI').style.display = 'none';
+  const _ui = document.getElementById('l3choiceUI'); if(_ui) _ui.style.display = 'none';
   l3.chosenBonus = choice;
   l3.choiceDone = true;
   l3.phase = 'bonus_place';
@@ -2189,17 +2190,40 @@ function drawLevel3() {
     ctx.textAlign='left';
   }
 
-  // Carlo (vista dall'alto — cerchietto con capelli)
+  // Carlo (top-down sprite)
   const carlox = rx + l3.px;
   const carloy = ry + l3.py;
-  ctx.fillStyle='#c8920a'; ctx.beginPath(); ctx.arc(carlox+8,carloy+8,10,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#9b1515'; ctx.beginPath(); ctx.arc(carlox+8,carloy+8,7,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#fcd5a0'; ctx.beginPath(); ctx.arc(carlox+8,carloy+6,5,0,Math.PI*2); ctx.fill();
+  // Ombra
+  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(carlox+9,carloy+18,9,4,0,0,Math.PI*2); ctx.fill();
+  // Corpo maglietta rossa
+  ctx.fillStyle='#9b1515'; ctx.fillRect(carlox+3,carloy+8,12,10);
+  // Testa
+  ctx.fillStyle='#fcd5a0'; ctx.beginPath(); ctx.arc(carlox+9,carloy+7,7,0,Math.PI*2); ctx.fill();
+  // Capelli biondi
+  ctx.fillStyle='#c8920a'; ctx.beginPath(); ctx.arc(carlox+9,carloy+4,7,Math.PI,0); ctx.fill();
+  ctx.fillRect(carlox+2,carloy+2,14,5);
+  // Occhi
+  ctx.fillStyle='#5bc8f0'; ctx.fillRect(carlox+5,carloy+7,3,3); ctx.fillRect(carlox+11,carloy+7,3,3);
+  // Pantaloni
+  ctx.fillStyle='#1e1e1e'; ctx.fillRect(carlox+3,carloy+16,5,6); ctx.fillRect(carlox+10,carloy+16,5,6);
 
-  // Ilia (viola scuro, segue Carlo)
-  ctx.fillStyle='#8b5a2b'; ctx.beginPath(); ctx.arc(carlox-14,carloy+8,8,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#1a1a1a'; ctx.beginPath(); ctx.arc(carlox-14,carloy+8,5,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#fcd5a0'; ctx.beginPath(); ctx.arc(carlox-14,carloy+6,4,0,Math.PI*2); ctx.fill();
+  // Ilia (top-down sprite, segue Carlo)
+  const iliax = carlox - 22;
+  const iliay = carloy;
+  // Ombra
+  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(iliax+7,iliay+17,7,3,0,0,Math.PI*2); ctx.fill();
+  // Corpo vestito nero
+  ctx.fillStyle='#1a1a1a'; ctx.fillRect(iliax+1,iliay+8,11,10);
+  // Testa
+  ctx.fillStyle='#fcd5a0'; ctx.beginPath(); ctx.arc(iliax+7,iliay+7,6,0,Math.PI*2); ctx.fill();
+  // Capelli castani lunghi
+  ctx.fillStyle='#8b5a2b'; ctx.beginPath(); ctx.arc(iliax+7,iliay+4,6,Math.PI,0); ctx.fill();
+  ctx.fillRect(iliax+1,iliay+2,12,5);
+  ctx.fillRect(iliax-1,iliay+6,3,12); ctx.fillRect(iliax+12,iliay+6,3,12);
+  // Occhi scuri
+  ctx.fillStyle='#2a1a0e'; ctx.fillRect(iliax+4,iliay+7,2,2); ctx.fillRect(iliax+9,iliay+7,2,2);
+  // Pantaloni neri
+  ctx.fillStyle='#141414'; ctx.fillRect(iliax+2,iliay+16,4,5); ctx.fillRect(iliax+8,iliay+16,4,5);
 
   // Dialog Ilia
   if (l3.iliaDialogTimer > 0) {
