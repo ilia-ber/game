@@ -106,7 +106,7 @@
   <h1>🏠<br/>TROVATA!</h1>
   <h2>AVETE TROVATO<br/>IL VOSTRO NIDO!</h2>
   <p>Ora bisogna<br/>sistemarla... ♥</p>
-  <button class="startBtn" id="btnLevel3" style="background:#2d7a27">AVANTI ▶</button>
+  <button class="startBtn" id="btnLevel3" style="background:#2d7a27" onclick="document.getElementById('screenL2Win').classList.add('hidden'); startLevel3();">AVANTI ▶</button>
 </div>
 
 <script>
@@ -2122,6 +2122,11 @@ let upPressed = false, downPressed = false;
 window.addEventListener('keydown', e => {
   if (e.key === 'ArrowUp')   upPressed = true;
   if (e.key === 'ArrowDown') downPressed = true;
+  // CHEAT: tasto 3 per saltare al livello 3
+  if (e.key === '3') {
+    document.querySelectorAll('.overlay').forEach(o => o.classList.add('hidden'));
+    startLevel3();
+  }
 });
 window.addEventListener('keyup', e => {
   if (e.key === 'ArrowUp')   upPressed = false;
