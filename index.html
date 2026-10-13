@@ -1979,25 +1979,21 @@ let l3 = {
 };
 
 function randomPositions(roomW, roomH, objW, objH) {
-  const margin = 15;
-  const minDist = Math.min(roomW, roomH) * 0.25; // distanza minima tra posizioni
-  const positions = [];
-  let attempts = 0;
-  while (positions.length < 3 && attempts < 200) {
-    attempts++;
-    const x = margin + Math.random() * (roomW - objW - margin*2);
-    const y = margin + Math.random() * (roomH - objH - margin*2);
-    // Verifica che sia abbastanza lontana dalle posizioni già scelte
-    const tooClose = positions.some(p => Math.abs(p.x-x) < minDist && Math.abs(p.y-y) < minDist);
-    if (!tooClose) positions.push({x: Math.round(x), y: Math.round(y)});
+  const m = 15;
+  const aw = roomW - objW - m*2;
+  const ah = roomH - objH - m*2;
+  // 3 posizioni garantite in zone diverse della stanza
+  const zones = [
+    {x: m + Math.random()*aw*0.4,      y: m + Math.random()*ah*0.4},      // angolo alto-sx
+    {x: m + aw*0.5 + Math.random()*aw*0.5, y: m + Math.random()*ah*0.5},  // destra centro
+    {x: m + Math.random()*aw*0.5,      y: m + ah*0.5 + Math.random()*ah*0.5}, // basso-sx
+  ];
+  // Shuffle per randomizzare quale è la posizione finale
+  for (let i = zones.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [zones[i],zones[j]] = [zones[j],zones[i]];
   }
-  // Fallback se non riesce a trovare posizioni distanziate
-  while (positions.length < 3) {
-    const x = margin + Math.random() * (roomW - objW - margin*2);
-    const y = margin + Math.random() * (roomH - objH - margin*2);
-    positions.push({x: Math.round(x), y: Math.round(y)});
-  }
-  return positions;
+  return zones.map(z => ({x:Math.round(z.x), y:Math.round(z.y)}));
 }
 
 function startLevel3() {
@@ -2065,10 +2061,10 @@ function updateLevel3() {
   if (upPressed)   dy = -speed;
   if (downPressed) dy =  speed;
 
-  // Hint timer
+  // Hint timer — conta quando in fase push con obj non ancora piazzato
   if (l3.phase === 'push' && l3.obj && !l3.obj.placed) {
     l3.hintTimer++;
-    if (l3.hintTimer === 600) { // 10 secondi
+    if (l3.hintTimer === 480) { // 8 secondi (più veloce per test)
       l3.hintVisible = true;
       l3.hintBlink = 0;
       // Scompare dopo 3 secondi (180 frames)
@@ -2115,9 +2111,9 @@ function updateLevel3() {
     }
   }
 
-  // Dopo bonus piazzato: porta obj a destra per confermare
-  if (l3.phase === 'bonus_place') {
-    if (l3.px > room.w - 18) {
+  // Dopo bonus piazzato: esce a destra SOLO se ha un bonus
+  if (l3.phase === 'bonus_place' && l3.bonusObj !== null) {
+    if (l3.px > room.w - 22) {
       nextObjOrRoom();
     }
   }
