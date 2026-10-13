@@ -2064,7 +2064,7 @@ function updateLevel3() {
     const obj = l3.obj;
     const lastPos = obj.positions[2];
     const atLast = Math.abs(obj.x - lastPos.x) < 20 && Math.abs(obj.y - lastPos.y) < 20;
-    if (atLast && !l3.choiceDone) {
+    if (atLast) {
       obj.placed = true;
       l3.phase = 'choice';
       l3.iliaDialog = 'Mmmmmh...\nmanca qualcosa!';
