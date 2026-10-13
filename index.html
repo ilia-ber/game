@@ -402,10 +402,17 @@ function drawCarlo() {
 function drawIliaHair(brown) {
   const sx = Math.round(sc(ilia.x));
   const sy = Math.round(ilia.y - ilia.h - 4);
-  const w = 48;
-  const h = 96;
-  const iliaMoving = Math.abs(ilia.x - (player.x - 55)) > 3;
-  const img = iliaMoving ? imgIliaRun : (brown ? imgIliaBrown : imgIliaPink);
+  const w = 56;
+  const h = 104;
+  let img;
+  if (level >= 2 && brown) {
+    // Dal livello 2 in poi: castana, con corsa se si muove
+    const iliaMoving = Math.abs(ilia.x - (player.x - 55)) > 3;
+    img = iliaMoving ? imgIliaRun : imgIliaBrown;
+  } else {
+    // Livello 1 e cutscene: sempre rosa ferma
+    img = imgIliaPink;
+  }
   if (!drawSprite(img, sx - 12, Math.round(ilia.y) - h, w, h, false)) {
     // fallback
     const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
