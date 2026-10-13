@@ -2038,7 +2038,7 @@ function resetL3Room() {
 
 function updateLevel3() {
   if (!l3.active || state !== 'playing' || level !== 3) return;
-  if (l3.phase === 'room_done' || l3.phase === 'choice') return;
+  if (l3.phase === 'room_done' || l3.phase === 'choice' || l3.phase === 'waiting_ilia') return;
   if (l3.iliaDialogTimer > 0) l3.iliaDialogTimer--;
 
   const room = L3_ROOMS[l3.room];
@@ -2052,7 +2052,7 @@ function updateLevel3() {
   if (upPressed)   dy = -speed;
   if (downPressed) dy =  speed;
 
-  // Hint timer — conta frames mentre si spinge
+  // Hint timer
   if (l3.phase === 'push' && l3.obj && !l3.obj.placed) {
     l3.hintTimer++;
     if (l3.hintTimer === 600) { // 10 secondi
@@ -2095,15 +2095,15 @@ function updateLevel3() {
     const atLast = Math.abs(obj.x - lastPos.x) < 30 && Math.abs(obj.y - lastPos.y) < 30;
     if (atLast) {
       obj.placed = true;
-      l3.phase = 'choice';
+      l3.phase = 'waiting_ilia'; // aspetta tap per aprire scelta
       l3.iliaDialog = 'Mmmmmh...\nmanca qualcosa!';
-      l3.iliaDialogTimer = 180;
-      setTimeout(() => showL3Choices(), 2000);
+      l3.iliaDialogTimer = 999; // non scompare da solo
+      l3.hintTimer = 0; l3.hintVisible = false;
     }
   }
 
-  // Dopo bonus piazzato: esce a destra → prossimo oggetto o prossima stanza
-  if (l3.phase === 'bonus_place' && l3.bonusObj) {
+  // Dopo bonus piazzato: porta obj a destra per confermare
+  if (l3.phase === 'bonus_place') {
     if (l3.px > room.w - 18) {
       nextObjOrRoom();
     }
@@ -2141,10 +2141,8 @@ function chooseL3Bonus(choice) {
   const room = L3_ROOMS[l3.room];
   // Bonus appare vicino al centro, da piazzare liberamente
   l3.bonusObj = { emoji: choice.emoji, x: room.w/2 - 16, y: room.h/2 + 20 };
-  l3.iliaDialog = 'Bene!\nOra mettilo\ndove vuoi →';
-  l3.iliaDialogTimer = 120;
-  // NON carichiamo il prossimo oggetto qui — lo facciamo quando l'utente
-  // esce a destra della stanza (in nextObjOrRoom)
+  l3.iliaDialog = '';
+  l3.iliaDialogTimer = 0;
 }
 
 function nextObjOrRoom() {
