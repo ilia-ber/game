@@ -413,7 +413,9 @@ function drawIliaHair(brown) {
     // Livello 1 e cutscene: sempre rosa ferma
     img = imgIliaPink;
   }
-  if (!drawSprite(img, sx - 12, Math.round(ilia.y) - h, w, h, false)) {
+  // Nel livello 1 fine (Ilia ferma), guardare verso Carlo (flip=true = guarda sx)
+  const iliaFlip = (level === 1 && Math.abs(ilia.vx || 0) < 0.1);
+  if (!drawSprite(img, sx - 12, Math.round(ilia.y) - h, w, h, iliaFlip)) {
     // fallback
     const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
     const hair = brown ? '#8b5a2b' : '#f070b0';
@@ -1024,8 +1026,13 @@ function drawCutscene() {
 
   drawBackground();
   obstacles.forEach(drawObstacle);
-  // draw Ilia with brown/pink hair based on phase
-  drawIliaHair(cutscene.iliaHairBrown);
+  // draw Ilia nella cutscene
+  const cutsceneIliaImg = cutscene.iliaHairBrown ? imgIliaBrown : imgIliaPink;
+  const csx = Math.round(cutscene.iliaX);
+  const csy = Math.round(cutscene.iliaY);
+  if (!drawSprite(cutsceneIliaImg, csx - 28, csy - 104, 56, 104, false)) {
+    drawIliaHair(cutscene.iliaHairBrown);
+  }
   drawCarlo();
 
   // puff particles
