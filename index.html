@@ -105,7 +105,8 @@
 <div class="overlay hidden" id="screenL2Win">
   <h1>🏠<br/>TROVATA!</h1>
   <h2>AVETE TROVATO<br/>IL VOSTRO NIDO!</h2>
-  <p>Coming soon... ♥</p>
+  <p>Ora bisogna<br/>sistemarla... ♥</p>
+  <button class="startBtn" id="btnLevel3" style="background:#2d7a27">AVANTI ▶</button>
 </div>
 
 <script>
@@ -618,8 +619,9 @@ function drawCallEffect() {
 // ── UPDATE ────────────────────────────────────────────
 function update() {
   if (state==='cutscene') { updateCutscene(); return; }
-  if (state==='win2') return;
+  if (state==='win2' || state==='win3') return;
   if (state!=='playing') return;
+  if (level===3) { updateLevel3(); return; }
   if (level===2) { updateLevel2(); return; }
   if (shake>0) shake-=0.5;
   if (powerupCooldown>0) powerupCooldown--;
@@ -756,6 +758,7 @@ function gameOver() {
 function render() {
   ctx.clearRect(0,0,W,H);
   if (state==='cutscene') { drawCutscene(); return; }
+  if (level===3) { drawLevel3(); return; }
   if (level===2) { drawL2(); return; }
   drawBackground();
   if (state==='playing'||state==='win') {
@@ -1352,12 +1355,13 @@ function updateLevel2() {
     if (l2.house3Phase === 'bank' && !l2.bankFlying) {
       if (player.x + player.w > l2.house3X + 60) player.x = l2.house3X + 60 - player.w;
     }
-    if (l2.house3Phase === 'win' && player.x > l2.house3X + 200) {
+    if (l2.house3Phase === 'win' && player.x > l2.house3X + 160) {
       l2.house3Phase = 'end';
+      spawnParticles(player.x+14, player.y-20, '#ffe066', 50);
       setTimeout(() => {
         document.getElementById('screenL2Win').classList.remove('hidden');
         state = 'win2';
-      }, 1500);
+      }, 1000);
     }
   }
 
@@ -1899,3 +1903,317 @@ loop();
 </script>
 </body>
 </html>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// LIVELLO 3 — TOP DOWN — LA CASA
+// ═══════════════════════════════════════════════════════════════
+
+const L3_ROOMS = [
+  { name: 'SALOTTO',          color: '#f5f0e8', w: 280, h: 220 },
+  { name: 'CAMERETTA/STUDIO', color: '#eef0f5', w: 220, h: 200 },
+  { name: 'CAMERA DA LETTO',  color: '#f5eef0', w: 260, h: 210 },
+];
+
+const L3_OBJECTS = [
+  // Salotto
+  { id:'divano',   room:0, emoji:'🛋️',  label:'DIVANO',   w:50, h:28 },
+  { id:'tavolino', room:0, emoji:'☕',   label:'TAVOLINO', w:30, h:30 },
+  // Cameretta
+  { id:'scrivania',room:1, emoji:'🖥️',  label:'SCRIVANIA',w:48, h:30 },
+  { id:'sedia',    room:1, emoji:'🪑',  label:'SEDIA',    w:24, h:24 },
+  // Camera
+  { id:'letto',    room:2, emoji:'🛏️',  label:'LETTO',    w:55, h:40 },
+  { id:'armadio',  room:2, emoji:'🪞',  label:'ARMADIO',  w:30, h:50 },
+];
+
+const L3_BONUS_CHOICES = [
+  [ {emoji:'🌿',label:'PIANTA'}, {emoji:'🐘',label:'ELEFANTE'}, {emoji:'📺',label:'TV'} ],
+  [ {emoji:'📚',label:'LIBRERIA'}, {emoji:'🎮',label:'CONSOLE'}, {emoji:'🎸',label:'CHITARRA'} ],
+  [ {emoji:'🖼️',label:'QUADRO'}, {emoji:'🪴',label:'ORCHIDEA'}, {emoji:'🐈',label:'GATTINO'} ],
+];
+
+let l3 = {
+  active: false,
+  room: 0,          // stanza corrente
+  phase: 'push',    // push | choice | bonus_place | done
+  // Player top-down
+  px: 0, py: 0, pspeed: 2.5,
+  // Oggetto corrente
+  obj: null,        // {x,y,w,h,pushed,positions,posIdx}
+  bonusObj: null,
+  // Scelta bonus
+  choiceDone: false,
+  chosenBonus: null,
+  // Iliad dialogo
+  iliaDialog: '',
+  iliaDialogTimer: 0,
+};
+
+function randomPositions(roomW, roomH, objW, objH) {
+  const margin = 20;
+  const positions = [];
+  while (positions.length < 3) {
+    const x = margin + Math.random() * (roomW - objW - margin*2);
+    const y = margin + Math.random() * (roomH - objH - margin*2);
+    positions.push({x: Math.round(x), y: Math.round(y)});
+  }
+  return positions;
+}
+
+function startLevel3() {
+  level = 3;
+  state = 'playing';
+  l3.active = true;
+  l3.room = 0;
+  initL3Room(0);
+  // Aggiorna bottone reset
+  const em = document.getElementById('powerupEmoji');
+  const hl = document.getElementById('healLabel');
+  if (em) em.textContent = '🔄';
+  if (hl) hl.textContent = 'RESET';
+}
+
+function initL3Room(roomIdx) {
+  l3.room = roomIdx;
+  l3.phase = 'push';
+  l3.choiceDone = false;
+  l3.chosenBonus = null;
+  l3.iliaDialog = '';
+  l3.iliaDialogTimer = 0;
+  l3.bonusObj = null;
+
+  const room = L3_ROOMS[roomIdx];
+  // Carlo al centro sinistra
+  l3.px = 30;
+  l3.py = room.h / 2;
+
+  // Oggetto della stanza
+  const objDef = L3_OBJECTS.find(o => o.room === roomIdx) || L3_OBJECTS[roomIdx*2];
+  const positions = randomPositions(room.w, room.h, objDef.w, objDef.h);
+  l3.obj = {
+    def: objDef,
+    x: positions[0].x,
+    y: positions[0].y,
+    positions: positions,
+    posIdx: 0,
+    placed: false,
+  };
+
+  document.getElementById('l3choiceUI').style.display = 'none';
+}
+
+function resetL3Room() {
+  initL3Room(l3.room);
+}
+
+function updateLevel3() {
+  if (!l3.active || state !== 'playing' || level !== 3) return;
+  if (l3.iliaDialogTimer > 0) l3.iliaDialogTimer--;
+
+  const room = L3_ROOMS[l3.room];
+  const speed = l3.pspeed;
+  const pw = 16, ph = 16;
+
+  // Movimento Carlo top-down
+  let dx = 0, dy = 0;
+  if (leftPressed)  dx = -speed;
+  if (rightPressed) dx =  speed;
+  if (jumpPressed || upPressed) dy = -speed;
+  if (downPressed)  dy =  speed;
+
+  // Spinge oggetto se vicino
+  if (l3.phase === 'push' && l3.obj && !l3.obj.placed) {
+    const obj = l3.obj;
+    const nearX = Math.abs((l3.px + pw/2) - (obj.x + obj.def.w/2)) < obj.def.w/2 + pw;
+    const nearY = Math.abs((l3.py + ph/2) - (obj.y + obj.def.h/2)) < obj.def.h/2 + ph;
+    if (nearX && nearY) {
+      obj.x = Math.max(0, Math.min(room.w - obj.def.w, obj.x + dx));
+      obj.y = Math.max(0, Math.min(room.h - obj.def.h, obj.y + dy));
+    }
+  }
+  if (l3.phase === 'bonus_place' && l3.bonusObj) {
+    const obj = l3.bonusObj;
+    const nearX = Math.abs((l3.px + pw/2) - (obj.x + 16)) < 32 + pw;
+    const nearY = Math.abs((l3.py + ph/2) - (obj.y + 16)) < 32 + ph;
+    if (nearX && nearY) {
+      obj.x = Math.max(0, Math.min(room.w - 32, obj.x + dx));
+      obj.y = Math.max(0, Math.min(room.h - 32, obj.y + dy));
+    }
+  }
+
+  // Muovi Carlo (clamp nella stanza)
+  l3.px = Math.max(0, Math.min(room.w - pw, l3.px + dx));
+  l3.py = Math.max(0, Math.min(room.h - ph, l3.py + dy));
+
+  // Check: l'oggetto è all'ultima posizione?
+  if (l3.phase === 'push' && l3.obj && !l3.obj.placed) {
+    const obj = l3.obj;
+    const lastPos = obj.positions[2];
+    const atLast = Math.abs(obj.x - lastPos.x) < 20 && Math.abs(obj.y - lastPos.y) < 20;
+    if (atLast && !l3.choiceDone) {
+      obj.placed = true;
+      l3.phase = 'choice';
+      l3.iliaDialog = 'Mmmmmh...\nmanca qualcosa!';
+      l3.iliaDialogTimer = 180;
+      setTimeout(() => showL3Choices(), 2000);
+    }
+  }
+
+  // Dopo bonus piazzato: stanza completata
+  if (l3.phase === 'bonus_place' && l3.bonusObj) {
+    // Piazzato quando player esce a destra
+    if (l3.px > room.w - 20) {
+      nextL3Room();
+    }
+  }
+
+  // Powerup = reset
+  if (powerupPressed) {
+    powerupPressed = false;
+    resetL3Room();
+  }
+}
+
+function showL3Choices() {
+  const choices = L3_BONUS_CHOICES[l3.room];
+  const ui = document.getElementById('l3choiceUI');
+  const btns = document.getElementById('l3choiceBtns');
+  btns.innerHTML = '';
+  choices.forEach((ch, i) => {
+    const btn = document.createElement('button');
+    btn.style.cssText = "font-family:'Press Start 2P',monospace;font-size:8px;background:#2a2a3e;color:#fff;border:2px solid #ffe066;padding:10px 12px;border-radius:4px;cursor:pointer;";
+    btn.innerHTML = ch.emoji + '<br><span style="font-size:6px">' + ch.label + '</span>';
+    btn.onclick = () => chooseL3Bonus(ch);
+    btns.appendChild(btn);
+  });
+  ui.style.display = 'flex';
+  l3.phase = 'choice';
+}
+
+function chooseL3Bonus(choice) {
+  document.getElementById('l3choiceUI').style.display = 'none';
+  l3.chosenBonus = choice;
+  l3.choiceDone = true;
+  l3.phase = 'bonus_place';
+  const room = L3_ROOMS[l3.room];
+  // Piazza il bonus al centro della stanza
+  l3.bonusObj = { emoji: choice.emoji, x: room.w/2 - 16, y: room.h/2 - 16 };
+  l3.iliaDialog = 'Perfetto!\nOra esci dalla\nstanza →';
+  l3.iliaDialogTimer = 240;
+}
+
+function nextL3Room() {
+  if (l3.room >= 2) {
+    // Fine gioco!
+    l3.active = false;
+    setTimeout(() => {
+      document.getElementById('screenGameWin').classList.remove('hidden');
+      state = 'win3';
+    }, 800);
+  } else {
+    initL3Room(l3.room + 1);
+    l3.px = 30;
+    l3.py = L3_ROOMS[l3.room].h / 2;
+  }
+}
+
+// Controllo su/giù per top-down
+let upPressed = false, downPressed = false;
+window.addEventListener('keydown', e => {
+  if (e.key === 'ArrowUp')   upPressed = true;
+  if (e.key === 'ArrowDown') downPressed = true;
+});
+window.addEventListener('keyup', e => {
+  if (e.key === 'ArrowUp')   upPressed = false;
+  if (e.key === 'ArrowDown') downPressed = false;
+});
+
+function drawLevel3() {
+  if (!l3.active) return;
+  const room = L3_ROOMS[l3.room];
+
+  // Sfondo
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stanza centrata
+  const rx = (W - room.w) / 2;
+  const ry = (H - room.h) / 2 - 20;
+
+  // Pavimento
+  ctx.fillStyle = room.color;
+  ctx.fillRect(rx, ry, room.w, room.h);
+  // Griglia pavimento
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+  ctx.lineWidth = 1;
+  for (let gx = rx; gx < rx+room.w; gx+=30) { ctx.beginPath(); ctx.moveTo(gx,ry); ctx.lineTo(gx,ry+room.h); ctx.stroke(); }
+  for (let gy = ry; gy < ry+room.h; gy+=30) { ctx.beginPath(); ctx.moveTo(rx,gy); ctx.lineTo(rx+room.w,gy); ctx.stroke(); }
+  // Bordi muri
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 4;
+  ctx.strokeRect(rx, ry, room.w, room.h);
+  // Uscita destra
+  ctx.fillStyle = '#8b6914';
+  ctx.fillRect(rx+room.w-4, ry+room.h/2-20, 8, 40);
+  ctx.fillStyle = '#ffe066'; ctx.font='6px "Press Start 2P"'; ctx.textAlign='center';
+  ctx.fillText('USCITA', rx+room.w, ry+room.h/2-28); ctx.textAlign='left';
+
+  // Nome stanza
+  ctx.font='9px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
+  ctx.fillText(room.name, W/2, ry-12); ctx.textAlign='left';
+
+  // Oggetto principale
+  if (l3.obj) {
+    const obj = l3.obj;
+    ctx.font='28px serif'; ctx.textAlign='center';
+    ctx.fillText(obj.def.emoji, rx+obj.x+obj.def.w/2, ry+obj.y+obj.def.h/2+8);
+    // Highlight quando Carlo è vicino
+    const pw=16,ph=16;
+    const nearX = Math.abs((l3.px+8)-(obj.x+obj.def.w/2)) < obj.def.w/2+pw;
+    const nearY = Math.abs((l3.py+8)-(obj.y+obj.def.h/2)) < obj.def.h/2+ph;
+    if (nearX && nearY && l3.phase==='push') {
+      ctx.strokeStyle='#ffe066'; ctx.lineWidth=2;
+      ctx.strokeRect(rx+obj.x, ry+obj.y, obj.def.w, obj.def.h);
+    }
+    ctx.textAlign='left';
+  }
+
+  // Bonus object
+  if (l3.bonusObj) {
+    ctx.font='24px serif'; ctx.textAlign='center';
+    ctx.fillText(l3.bonusObj.emoji, rx+l3.bonusObj.x+16, ry+l3.bonusObj.y+22);
+    ctx.textAlign='left';
+  }
+
+  // Carlo (vista dall'alto — cerchietto con capelli)
+  const carlox = rx + l3.px;
+  const carloy = ry + l3.py;
+  ctx.fillStyle='#c8920a'; ctx.beginPath(); ctx.arc(carlox+8,carloy+8,10,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#9b1515'; ctx.beginPath(); ctx.arc(carlox+8,carloy+8,7,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fcd5a0'; ctx.beginPath(); ctx.arc(carlox+8,carloy+6,5,0,Math.PI*2); ctx.fill();
+
+  // Ilia (viola scuro, segue Carlo)
+  ctx.fillStyle='#8b5a2b'; ctx.beginPath(); ctx.arc(carlox-14,carloy+8,8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#1a1a1a'; ctx.beginPath(); ctx.arc(carlox-14,carloy+8,5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fcd5a0'; ctx.beginPath(); ctx.arc(carlox-14,carloy+6,4,0,Math.PI*2); ctx.fill();
+
+  // Dialog Ilia
+  if (l3.iliaDialogTimer > 0) {
+    const bx=16, by=62, bw=W-32, bh=100;
+    ctx.fillStyle='rgba(0,0,10,0.92)'; ctx.fillRect(bx,by,bw,bh);
+    ctx.strokeStyle='#ffe066'; ctx.lineWidth=2; ctx.strokeRect(bx,by,bw,bh);
+    ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.fillText('ILIA:',bx+10,by+18);
+    ctx.fillStyle='#fff';
+    l3.iliaDialog.split('\n').forEach((line,i) => ctx.fillText(line, bx+10, by+38+i*22));
+  }
+
+  // HUD stanza
+  ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#aaa'; ctx.textAlign='right';
+  ctx.fillText('STANZA '+(l3.room+1)+'/3', W-10, 55); ctx.textAlign='left';
+
+  // Hint push
+  if (l3.phase==='push') {
+    ctx.font='6px "Press Start 2P"'; ctx.fillStyle='#888'; ctx.textAlign='center';
+    ctx.fillText('spingilo nella posizione giusta →', W/2, H-168); ctx.textAlign='left';
+  }
+}
+</script>
