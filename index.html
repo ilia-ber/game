@@ -1379,6 +1379,19 @@ function updateLevel2() {
 
 // tap canvas per guru dialog
 function handleGuruTap() {
+  // Level 3: room_done → prossima stanza al tap
+  if (level === 3 && l3.phase === 'room_done') {
+    l3.iliaDialogTimer = 0;
+    nextL3Room();
+    return;
+  }
+  // Level 3: waiting_ilia → apri scelta oggetto al tap
+  if (level === 3 && l3.phase === 'waiting_ilia') {
+    l3.iliaDialogTimer = 0;
+    l3.phase = 'choice';
+    showL3Choices();
+    return;
+  }
   // Dialog casa 3
   if (level === 2 && l2.house3Phase === 'dialog') {
     if (l2.house3DialogStep < 2) {
