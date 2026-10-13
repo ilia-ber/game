@@ -1966,8 +1966,19 @@ let l3 = {
 };
 
 function randomPositions(roomW, roomH, objW, objH) {
-  const margin = 20;
+  const margin = 15;
+  const minDist = Math.min(roomW, roomH) * 0.25; // distanza minima tra posizioni
   const positions = [];
+  let attempts = 0;
+  while (positions.length < 3 && attempts < 200) {
+    attempts++;
+    const x = margin + Math.random() * (roomW - objW - margin*2);
+    const y = margin + Math.random() * (roomH - objH - margin*2);
+    // Verifica che sia abbastanza lontana dalle posizioni già scelte
+    const tooClose = positions.some(p => Math.abs(p.x-x) < minDist && Math.abs(p.y-y) < minDist);
+    if (!tooClose) positions.push({x: Math.round(x), y: Math.round(y)});
+  }
+  // Fallback se non riesce a trovare posizioni distanziate
   while (positions.length < 3) {
     const x = margin + Math.random() * (roomW - objW - margin*2);
     const y = margin + Math.random() * (roomH - objH - margin*2);
@@ -2081,7 +2092,7 @@ function updateLevel3() {
   if (l3.phase === 'push' && l3.obj && !l3.obj.placed) {
     const obj = l3.obj;
     const lastPos = obj.positions[2];
-    const atLast = Math.abs(obj.x - lastPos.x) < 20 && Math.abs(obj.y - lastPos.y) < 20;
+    const atLast = Math.abs(obj.x - lastPos.x) < 30 && Math.abs(obj.y - lastPos.y) < 30;
     if (atLast) {
       obj.placed = true;
       l3.phase = 'choice';
