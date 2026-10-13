@@ -2165,10 +2165,8 @@ function chooseL3Bonus(choice) {
 }
 
 function nextObjOrRoom() {
+  // Nota: obj e bonus già salvati in chooseL3Bonus — non aggiungere di nuovo
   if (l3.objSeq < 2) {
-    // Salva obj e bonus già posizionati
-    if (l3.obj) l3.placedObjects.push({emoji:l3.obj.def.emoji, x:l3.obj.x, y:l3.obj.y, w:l3.obj.def.w, h:l3.obj.def.h});
-    if (l3.bonusObj) l3.placedObjects.push({emoji:l3.bonusObj.emoji, x:l3.bonusObj.x, y:l3.bonusObj.y, w:32, h:32});
     // Carica prossimo oggetto nella stessa stanza
     l3.objSeq++;
     l3.choiceDone = false;
