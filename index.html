@@ -1379,23 +1379,27 @@ function updateLevel2() {
 
 // tap canvas per guru dialog
 function handleGuruTap() {
-  // Level 3: room_done → prossima stanza al tap
-  if (level === 3 && l3.phase === 'room_done') {
-    l3.iliaDialogTimer = 0;
-    nextL3Room();
-    return;
-  }
-  // Level 3: waiting_next → prossimo oggetto al tap
-  if (level === 3 && l3.phase === 'waiting_next') {
-    l3.iliaDialogTimer = 0;
-    nextObjOrRoom();
-    return;
-  }
-  // Level 3: waiting_ilia → apri scelta oggetto al tap
-  if (level === 3 && l3.phase === 'waiting_ilia') {
-    l3.iliaDialogTimer = 0;
-    l3.phase = 'choice';
-    showL3Choices();
+  // Level 3
+  if (level === 3) {
+    if (l3.phase === 'done') {
+      // Prossima stanza
+      l3.iliaDialogTimer = 0;
+      if (l3.room >= 2) {
+        l3.active = false;
+        document.getElementById('screenGameWin').classList.remove('hidden');
+        state = 'win3';
+      } else {
+        initL3Room(l3.room + 1);
+      }
+      return;
+    }
+    if (l3.phase === 'waiting_ilia') {
+      // Apri menu scelta
+      l3.iliaDialogTimer = 0;
+      l3.phase = 'choice';
+      showL3Choices();
+      return;
+    }
     return;
   }
   // Dialog casa 3
@@ -1942,21 +1946,14 @@ const L3_ROOMS = [
   { name: 'CAMERA DA LETTO',  color: '#f5eef0', w: 260, h: 210 },
 ];
 
-const L3_OBJECTS = [
-  // Salotto: divano, pianta, tappeto
-  { id:'divano',   room:0, seq:0, emoji:'🛋️', label:'DIVANO',   w:52, h:30 },
-  { id:'pianta',   room:0, seq:1, emoji:'🌿', label:'PIANTA',   w:24, h:24 },
-  { id:'tappeto',  room:0, seq:2, emoji:'🟫', label:'TAPPETO',  w:44, h:36 },
-  // Studio: scrivania, libreria, lampada
-  { id:'scrivania',room:1, seq:0, emoji:'🖥️', label:'SCRIVANIA',w:50, h:30 },
-  { id:'libreria', room:1, seq:1, emoji:'📚', label:'LIBRERIA', w:24, h:48 },
-  { id:'lampada',  room:1, seq:2, emoji:'💡', label:'LAMPADA',  w:20, h:20 },
-  // Camera: letto, armadio, comodino
-  { id:'letto',    room:2, seq:0, emoji:'🛏️', label:'LETTO',    w:58, h:44 },
-  { id:'armadio',  room:2, seq:1, emoji:'🚪', label:'ARMADIO',  w:28, h:52 },
-  { id:'comodino', room:2, seq:2, emoji:'🕯️', label:'COMODINO', w:22, h:22 },
+// Oggetto iniziale fisso per ogni stanza
+const L3_FIRST_OBJ = [
+  { emoji:'🛋️', label:'DIVANO',   w:52, h:30 },
+  { emoji:'🖥️', label:'SCRIVANIA',w:50, h:30 },
+  { emoji:'🛏️', label:'LETTO',    w:58, h:44 },
 ];
 
+// Scelte per ogni stanza (obj 2 e obj 3)
 const L3_BONUS_CHOICES = [
   [ {emoji:'🌿',label:'PIANTA'}, {emoji:'🐘',label:'ELEFANTE'}, {emoji:'📺',label:'TV'} ],
   [ {emoji:'📚',label:'LIBRERIA'}, {emoji:'🎮',label:'CONSOLE'}, {emoji:'🎸',label:'CHITARRA'} ],
@@ -1965,37 +1962,30 @@ const L3_BONUS_CHOICES = [
 
 let l3 = {
   active: false,
-  room: 0,          // stanza corrente
-  phase: 'push',    // push | choice | bonus_place | done
-  // Player top-down
+  room: 0,
+  phase: 'push', // push | waiting_ilia | choice | done
   px: 0, py: 0, pspeed: 2.5,
-  // Oggetto corrente
-  obj: null,        // oggetto corrente da spingere
-  bonusObj: null,   // bonus corrente da piazzare
-  placedObjects: [],// tutti gli obj+bonus già piazzati in questa stanza
-  hintTimer: 0,      // secondi da quando si spinge l'oggetto
-  hintVisible: false,
-  hintBlink: 0,
-  // Scelta bonus
-  choiceDone: false,
-  chosenBonus: null,
-  // Iliad dialogo
+  obj: null,           // oggetto corrente da spingere
+  objCount: 0,         // quanti oggetti piazzati in questa stanza (0,1,2)
+  placedObjects: [],   // oggetti già piazzati (visibili permanentemente)
   iliaDialog: '',
   iliaDialogTimer: 0,
+  hintTimer: 0,
+  hintVisible: false,
+  hintBlink: 0,
 };
 
 function randomPositions(roomW, roomH, objW, objH) {
   const m = 15;
   const aw = roomW - objW - m*2;
   const ah = roomH - objH - m*2;
-  // 3 posizioni garantite in zone diverse della stanza
+  if (aw <= 0 || ah <= 0) return [{x:m,y:m},{x:m+40,y:m+40},{x:m+80,y:m}];
   const zones = [
-    {x: m + Math.random()*aw*0.4,      y: m + Math.random()*ah*0.4},      // angolo alto-sx
-    {x: m + aw*0.5 + Math.random()*aw*0.5, y: m + Math.random()*ah*0.5},  // destra centro
-    {x: m + Math.random()*aw*0.5,      y: m + ah*0.5 + Math.random()*ah*0.5}, // basso-sx
+    {x: m + Math.random()*aw*0.4,          y: m + Math.random()*ah*0.4},
+    {x: m + aw*0.5 + Math.random()*aw*0.5, y: m + Math.random()*ah*0.5},
+    {x: m + Math.random()*aw*0.5,          y: m + ah*0.5 + Math.random()*ah*0.4},
   ];
-  // Shuffle per randomizzare quale è la posizione finale
-  for (let i = zones.length-1; i>0; i--) {
+  for (let i=zones.length-1; i>0; i--) {
     const j = Math.floor(Math.random()*(i+1));
     [zones[i],zones[j]] = [zones[j],zones[i]];
   }
@@ -2006,9 +1996,7 @@ function startLevel3() {
   level = 3;
   state = 'playing';
   l3.active = true;
-  l3.room = 0;
   initL3Room(0);
-  // Aggiorna bottone reset
   const em = document.getElementById('powerupEmoji');
   const hl = document.getElementById('healLabel');
   if (em) em.textContent = '🔄';
@@ -2018,111 +2006,108 @@ function startLevel3() {
 function initL3Room(roomIdx) {
   l3.room = roomIdx;
   l3.phase = 'push';
-  l3.choiceDone = false;
-  l3.chosenBonus = null;
+  l3.objCount = 0;
+  l3.placedObjects = [];
   l3.iliaDialog = '';
   l3.iliaDialogTimer = 0;
-  l3.bonusObj = null;
-  l3.objSeq = 0;
-  l3.placedObjects = [];
   l3.hintTimer = 0; l3.hintVisible = false; l3.hintBlink = 0;
-
+  l3.obj = null;
   const room = L3_ROOMS[roomIdx];
-  // Carlo al centro sinistra
-  l3.px = 30;
-  l3.py = room.h / 2;
-
-  // Oggetto della stanza
-  const objDef = L3_OBJECTS.find(o => o.room === roomIdx && o.seq === 0);
-  const positions = randomPositions(room.w, room.h, objDef.w, objDef.h);
-  l3.obj = {
-    def: objDef,
-    x: positions[0].x,
-    y: positions[0].y,
-    positions: positions,
-    posIdx: 0,
-    placed: false,
-  };
-
-  const _ui = document.getElementById('l3choiceUI'); if(_ui) _ui.style.display = 'none';
+  l3.px = 20; l3.py = room.h/2;
+  // Carica primo oggetto fisso
+  loadNextObj();
+  const _ui = document.getElementById('l3choiceUI');
+  if (_ui) _ui.style.display = 'none';
 }
 
-function resetL3Room() {
-  initL3Room(l3.room);
+function loadNextObj() {
+  const room = L3_ROOMS[l3.room];
+  let def;
+  if (l3.objCount === 0) {
+    def = L3_FIRST_OBJ[l3.room];
+  } else {
+    // Usa l'oggetto scelto dal menu (già salvato in l3.pendingObj)
+    def = l3.pendingObj;
+  }
+  const positions = randomPositions(room.w, room.h, def.w || 32, def.h || 32);
+  l3.obj = { emoji: def.emoji, w: def.w||32, h: def.h||32,
+             x: positions[0].x, y: positions[0].y,
+             positions: positions, placed: false };
+  l3.phase = 'push';
+  l3.hintTimer = 0; l3.hintVisible = false; l3.hintBlink = 0;
+  l3.iliaDialog = ''; l3.iliaDialogTimer = 0;
 }
 
 function updateLevel3() {
   if (!l3.active || state !== 'playing' || level !== 3) return;
-  if (l3.phase === 'room_done' || l3.phase === 'choice' || l3.phase === 'processing' || l3.phase === 'waiting_ilia' || l3.phase === 'waiting_next') return;
+  if (l3.phase === 'waiting_ilia' || l3.phase === 'choice' || l3.phase === 'done') return;
   if (l3.iliaDialogTimer > 0) l3.iliaDialogTimer--;
 
   const room = L3_ROOMS[l3.room];
   const speed = l3.pspeed;
-  const pw = 16, ph = 16;
-
-  // Movimento Carlo top-down
   let dx = 0, dy = 0;
   if (leftPressed)  dx = -speed;
   if (rightPressed) dx =  speed;
-  if (upPressed)   dy = -speed;
-  if (downPressed) dy =  speed;
-
-  // Hint timer — conta quando in fase push con obj non ancora piazzato
-  if (l3.phase === 'push' && l3.obj && !l3.obj.placed) {
-    l3.hintTimer++;
-    if (l3.hintTimer === 480) { // 8 secondi (più veloce per test)
-      l3.hintVisible = true;
-      l3.hintBlink = 0;
-      // Scompare dopo 3 secondi (180 frames)
-      setTimeout(() => { l3.hintVisible = false; l3.hintTimer = 0; }, 3000);
-    }
-    if (l3.hintVisible) l3.hintBlink++;
-  }
+  if (upPressed)    dy = -speed;
+  if (downPressed)  dy =  speed;
 
   // Spinge oggetto se vicino
   if (l3.phase === 'push' && l3.obj && !l3.obj.placed) {
     const obj = l3.obj;
-    const nearX = Math.abs((l3.px + pw/2) - (obj.x + obj.def.w/2)) < obj.def.w/2 + pw;
-    const nearY = Math.abs((l3.py + ph/2) - (obj.y + obj.def.h/2)) < obj.def.h/2 + ph;
+    const nearX = Math.abs((l3.px+9) - (obj.x+obj.w/2)) < obj.w/2 + 14;
+    const nearY = Math.abs((l3.py+9) - (obj.y+obj.h/2)) < obj.h/2 + 14;
     if (nearX && nearY) {
-      obj.x = Math.max(0, Math.min(room.w - obj.def.w, obj.x + dx));
-      obj.y = Math.max(0, Math.min(room.h - obj.def.h, obj.y + dy));
+      obj.x = Math.max(0, Math.min(room.w - obj.w, obj.x + dx));
+      obj.y = Math.max(0, Math.min(room.h - obj.h, obj.y + dy));
     }
-  }
-  if (l3.phase === 'bonus_place' && l3.bonusObj) {
-    const obj = l3.bonusObj;
-    const nearX = Math.abs((l3.px + pw/2) - (obj.x + 16)) < 32 + pw;
-    const nearY = Math.abs((l3.py + ph/2) - (obj.y + 16)) < 32 + ph;
-    if (nearX && nearY) {
-      obj.x = Math.max(0, Math.min(room.w - 32, obj.x + dx));
-      obj.y = Math.max(0, Math.min(room.h - 32, obj.y + dy));
+
+    // Hint timer
+    l3.hintTimer++;
+    if (l3.hintTimer === 480 && !l3.hintVisible) {
+      l3.hintVisible = true;
+      l3.hintBlink = 0;
+      setTimeout(() => { l3.hintVisible = false; l3.hintTimer = 0; }, 3000);
     }
-  }
+    if (l3.hintVisible) l3.hintBlink++;
 
-  // Muovi Carlo (clamp nella stanza)
-  l3.px = Math.max(0, Math.min(room.w - pw, l3.px + dx));
-  l3.py = Math.max(0, Math.min(room.h - ph, l3.py + dy));
-
-  // Check: l'oggetto è all'ultima posizione?
-  if (l3.phase === 'push' && l3.obj && !l3.obj.placed) {
-    const obj = l3.obj;
+    // Posizione finale raggiunta?
     const lastPos = obj.positions[2];
     const atLast = Math.abs(obj.x - lastPos.x) < 30 && Math.abs(obj.y - lastPos.y) < 30;
     if (atLast) {
       obj.placed = true;
-      l3.phase = 'waiting_ilia'; // aspetta tap per aprire scelta
-      l3.iliaDialog = 'Mmmmmh...\nmanca qualcosa!';
-      l3.iliaDialogTimer = 999; // non scompare da solo
-      l3.hintTimer = 0; l3.hintVisible = false;
+      obj.x = lastPos.x; obj.y = lastPos.y; // snap
+      // Salva in placedObjects
+      l3.placedObjects.push({emoji:obj.emoji, x:obj.x, y:obj.y, w:obj.w, h:obj.h});
+      l3.obj = null;
+      l3.hintVisible = false;
+      l3.objCount++;
+
+      if (l3.objCount >= 3) {
+        // Stanza completata!
+        l3.phase = 'done';
+        l3.iliaDialog = 'SPLENDIDO!
+E ESATTAMENTE
+COME LO
+IMMMAGINAVO!';
+        l3.iliaDialogTimer = 999;
+      } else {
+        // Mostra dialogo Ilia e aspetta tap per aprire menu
+        l3.phase = 'waiting_ilia';
+        l3.iliaDialog = 'Mmmmmh...
+manca qualcosa!';
+        l3.iliaDialogTimer = 999;
+      }
     }
   }
 
-  // bonus_place: avanza al tap (gestito in handleGuruTap)
+  // Muovi Carlo
+  l3.px = Math.max(0, Math.min(room.w - 18, l3.px + dx));
+  l3.py = Math.max(0, Math.min(room.h - 18, l3.py + dy));
 
   // Powerup = reset
   if (powerupPressed) {
     powerupPressed = false;
-    resetL3Room();
+    initL3Room(l3.room);
   }
 }
 
@@ -2132,78 +2117,23 @@ function showL3Choices() {
   const btns = document.getElementById('l3choiceBtns');
   if (!ui || !btns) return;
   btns.innerHTML = '';
-  choices.forEach((ch, i) => {
+  choices.forEach((ch) => {
     const btn = document.createElement('button');
     btn.style.cssText = "font-family:'Press Start 2P',monospace;font-size:7px;background:#1a1a3e;color:#fff;border:2px solid #ffe066;padding:12px 16px;border-radius:6px;cursor:pointer;min-width:80px;text-align:center;";
     btn.innerHTML = '<div style="font-size:26px;line-height:1.2">' + ch.emoji + '</div>' + ch.label;
-    btn.onclick = () => chooseL3Bonus(ch);
+    btn.onclick = () => chooseObj(ch);
     btns.appendChild(btn);
   });
   ui.style.display = 'flex';
-  l3.phase = 'choice';
 }
 
-function chooseL3Bonus(choice) {
-  if (l3.phase !== 'choice') return; // guard: evita doppia chiamata
-  const _ui = document.getElementById('l3choiceUI'); if(_ui) _ui.style.display = 'none';
-  l3.phase = 'processing'; // blocca subito
-  l3.chosenBonus = choice;
-  l3.choiceDone = true;
-  const room = L3_ROOMS[l3.room];
-  // Salva l'obj fisso in placedObjects e azzera l3.obj
-  if (l3.obj) {
-    l3.placedObjects.push({emoji:l3.obj.def.emoji, x:l3.obj.x, y:l3.obj.y, w:l3.obj.def.w, h:l3.obj.def.h});
-    l3.obj = null;
-  }
-  // Crea il bonus in posizione random e salvalo subito
-  const bx = 20 + Math.random()*(room.w-60);
-  const by = 20 + Math.random()*(room.h-60);
-  const bonus = { emoji: choice.emoji, x: Math.round(bx), y: Math.round(by), w:32, h:32 };
-  l3.placedObjects.push(bonus);
-  l3.bonusObj = null; // non usato separatamente
-  l3.phase = 'waiting_next';
-  l3.iliaDialog = 'Ottima scelta!\nTocca per continuare';
-  l3.iliaDialogTimer = 999;
-}
-
-function nextObjOrRoom() {
-  // Nota: obj e bonus già salvati in chooseL3Bonus — non aggiungere di nuovo
-  if (l3.objSeq < 2) {
-    // Carica prossimo oggetto nella stessa stanza
-    l3.objSeq++;
-    l3.choiceDone = false;
-    l3.bonusObj = null;
-    l3.phase = 'push';
-    const nextDef = L3_OBJECTS.find(o => o.room === l3.room && o.seq === l3.objSeq);
-    if (nextDef) {
-      const room2 = L3_ROOMS[l3.room];
-      const positions = randomPositions(room2.w, room2.h, nextDef.w, nextDef.h);
-      l3.obj = { def:nextDef, x:positions[0].x, y:positions[0].y, positions, posIdx:0, placed:false };
-    }
-    l3.px = 10; l3.py = L3_ROOMS[l3.room].h/2;
-    l3.hintTimer = 0; l3.hintVisible = false; l3.hintBlink = 0;
-  } else {
-    // Tutti e 3 completati → SPLENDIDO → prossima stanza
-    l3.iliaDialog = 'SPLENDIDO!\nE ESATTAMENTE\nCOME LO IMMAGINAVO!';
-    l3.iliaDialogTimer = 240;
-    l3.phase = 'room_done';
-    // nextL3Room al tap
-  }
-}
-
-function nextL3Room() {
-  if (l3.room >= 2) {
-    // Fine gioco!
-    l3.active = false;
-    setTimeout(() => {
-      document.getElementById('screenGameWin').classList.remove('hidden');
-      state = 'win3';
-    }, 800);
-  } else {
-    initL3Room(l3.room + 1);
-    l3.px = 30;
-    l3.py = L3_ROOMS[l3.room].h / 2;
-  }
+function chooseObj(choice) {
+  if (l3.phase !== 'choice') return;
+  const _ui = document.getElementById('l3choiceUI');
+  if (_ui) _ui.style.display = 'none';
+  // Salva la scelta e carica il prossimo oggetto
+  l3.pendingObj = choice;
+  loadNextObj();
 }
 
 // Controllo su/giù per top-down
@@ -2211,7 +2141,6 @@ let upPressed = false, downPressed = false;
 window.addEventListener('keydown', e => {
   if (e.key === 'ArrowUp')   upPressed = true;
   if (e.key === 'ArrowDown') downPressed = true;
-  // CHEAT: tasto 3 per saltare al livello 3
   if (e.key === '3') {
     document.querySelectorAll('.overlay').forEach(o => o.classList.add('hidden'));
     startLevel3();
@@ -2221,152 +2150,109 @@ window.addEventListener('keyup', e => {
   if (e.key === 'ArrowUp')   upPressed = false;
   if (e.key === 'ArrowDown') downPressed = false;
 });
-
+</script>
+<script>
 function drawLevel3() {
   if (!l3.active) return;
   const room = L3_ROOMS[l3.room];
 
-  // Sfondo
   ctx.fillStyle = '#0d0d1a';
   ctx.fillRect(0, 0, W, H);
 
   // ── PLANIMETRIA IN ALTO ──
-  // Planimetria reale della casa (basata sulla pianta caricata)
-  // Stanze giocabili: SALOTTO (0), STUDIO/CAMERETTA (1), CAMERA DA LETTO (2)
   const mapLayout = [
-    // Muri esterni e stanze non giocabili (grigio scuro)
-    {name:'',         x:0,   y:0,   w:200, h:170, color:'#1a1a22', play:false}, // salone area
-    {name:'',         x:0,   y:170, w:110, h:110, color:'#1a1a22', play:false}, // cucina area
-    {name:'',         x:110, y:170, w:90,  h:110, color:'#131318', play:false}, // disimpegno
-    {name:'',         x:200, y:0,   w:140, h:90,  color:'#1a1a22', play:false}, // cam1 area
-    {name:'',         x:200, y:90,  w:140, h:190, color:'#1a1a22', play:false}, // cam2 area
-    // Stanze giocabili (colorate e illuminate)
-    {name:'SALOTTO',          x:10,  y:10,  w:180, h:150, color:'#f5f0e8', play:true,  roomIdx:0},
-    {name:'CAMERETTA/STUDIO', x:205, y:5,   w:130, h:80,  color:'#eef0f5', play:true,  roomIdx:1},
-    {name:'CAMERA DA LETTO',  x:205, y:95,  w:130, h:175, color:'#f5eef0', play:true,  roomIdx:2},
-    // Cucina (non giocabile ma visibile)
-    {name:'CUCINA',   x:5,   y:175, w:100, h:100, color:'#f0f0e8', play:false},
-    // Bagno (piccolo)
-    {name:'BAGNO',    x:115, y:175, w:80,  h:100, color:'#e8f0f5', play:false},
+    {name:'',        x:0,   y:0,   w:200, h:170, color:'#111118', play:false},
+    {name:'',        x:0,   y:170, w:110, h:110, color:'#111118', play:false},
+    {name:'',        x:110, y:170, w:90,  h:110, color:'#0d0d14', play:false},
+    {name:'',        x:200, y:0,   w:140, h:90,  color:'#111118', play:false},
+    {name:'',        x:200, y:90,  w:140, h:190, color:'#111118', play:false},
+    {name:'SALOTTO',          x:10,  y:10,  w:180, h:150, color:'#f5f0e8', play:true, roomIdx:0},
+    {name:'CAMERETTA',        x:205, y:5,   w:130, h:80,  color:'#eef0f5', play:true, roomIdx:1},
+    {name:'CAMERA',           x:205, y:95,  w:130, h:175, color:'#f5eef0', play:true, roomIdx:2},
+    {name:'CUCINA',  x:5,   y:175, w:100, h:100, color:'#f0f0e8', play:false},
+    {name:'BAGNO',   x:115, y:175, w:80,  h:100, color:'#e8f0f5', play:false},
   ];
   const msc = 0.24;
   const mapTW = 340*msc, mapTH = 280*msc;
   const mapX = (W-mapTW)/2, mapY = 48;
   ctx.fillStyle='#111118'; ctx.fillRect(mapX-2,mapY-2,mapTW+4,mapTH+4);
-  mapLayout.forEach((mr,i) => {
+  mapLayout.forEach(mr => {
     const sx=mapX+mr.x*msc, sy=mapY+mr.y*msc, sw=mr.w*msc, sh=mr.h*msc;
     if (!mr.play) {
-      // Stanza non giocabile
-      ctx.fillStyle = mr.color || '#1a1a22';
-      ctx.fillRect(sx,sy,sw,sh);
-      ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=1;
-      ctx.strokeRect(sx,sy,sw,sh);
-      if (mr.name) {
-        ctx.font='4px "Press Start 2P"'; ctx.fillStyle='#444'; ctx.textAlign='center';
-        ctx.fillText(mr.name, sx+sw/2, sy+sh/2+2); ctx.textAlign='left';
-      }
+      ctx.fillStyle=mr.color||'#1a1a22'; ctx.fillRect(sx,sy,sw,sh);
+      ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=1; ctx.strokeRect(sx,sy,sw,sh);
+      if (mr.name) { ctx.font='4px "Press Start 2P"'; ctx.fillStyle='#444'; ctx.textAlign='center'; ctx.fillText(mr.name,sx+sw/2,sy+sh/2+2); ctx.textAlign='left'; }
     } else {
-      const ri = mr.roomIdx;
-      const active = ri === l3.room;
-      const done = ri < l3.room;
-      ctx.fillStyle = done ? '#1a3a1a' : active ? mr.color : '#111118';
-      ctx.fillRect(sx,sy,sw,sh);
-      ctx.strokeStyle = active ? '#ffe066' : done ? '#44ff44' : '#333';
-      ctx.lineWidth = active ? 2 : 1;
-      ctx.strokeRect(sx,sy,sw,sh);
+      const ri=mr.roomIdx, active=ri===l3.room, done=ri<l3.room;
+      ctx.fillStyle=done?'#1a3a1a':active?mr.color:'#111118'; ctx.fillRect(sx,sy,sw,sh);
+      ctx.strokeStyle=active?'#ffe066':done?'#44ff44':'#333'; ctx.lineWidth=active?2:1; ctx.strokeRect(sx,sy,sw,sh);
       ctx.font='4px "Press Start 2P"'; ctx.textAlign='center';
-      ctx.fillStyle = active ? '#ffe066' : done ? '#44ff44' : '#555';
-      ctx.fillText(done ? '✓' : mr.name.substring(0,8), sx+sw/2, sy+sh/2+2);
-      ctx.textAlign='left';
+      ctx.fillStyle=active?'#ffe066':done?'#44ff44':'#555';
+      ctx.fillText(done?'✓':mr.name, sx+sw/2, sy+sh/2+2); ctx.textAlign='left';
     }
   });
 
   // ── STANZA ZOOM ──
-  const zoomTop = mapY + mapTH + 10;
+  const zoomTop = mapY + mapTH + 18;
   const zoomBot = H - 150;
   const zoomH = zoomBot - zoomTop;
   const sc2 = Math.min((W-20)/room.w, zoomH/room.h);
   const rw = Math.round(room.w*sc2), rh = Math.round(room.h*sc2);
-  const rx = (W-rw)/2, ry = zoomTop + (zoomH-rh)/2;
+  const rx = (W-rw)/2, ry = zoomTop + (zoomH-rh)/2 + 8;
 
   // Pavimento
-  ctx.fillStyle = room.color;
-  ctx.fillRect(rx, ry, rw, rh);
-  // Griglia pavimento
-  ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1;
-  const gs = 30*sc2;
-  for (let gx=rx; gx<=rx+rw; gx+=gs){ctx.beginPath();ctx.moveTo(gx,ry);ctx.lineTo(gx,ry+rh);ctx.stroke();}
-  for (let gy=ry; gy<=ry+rh; gy+=gs){ctx.beginPath();ctx.moveTo(rx,gy);ctx.lineTo(rx+rw,gy);ctx.stroke();}
-  // Bordi muri
-  ctx.strokeStyle = '#666'; ctx.lineWidth = 3;
-  ctx.strokeRect(rx, ry, rw, rh);
-  // Uscita destra
-  const exitY = ry + rh/2 - 15;
-  ctx.fillStyle = '#b8860b'; ctx.fillRect(rx+rw-5, exitY, 9, 30);
-  if (l3.phase==='bonus_place') {
-    ctx.fillStyle='#ffe066'; ctx.font='6px "Press Start 2P"'; ctx.textAlign='center';
-    ctx.fillText('→ ESCI', rx+rw+22, exitY-4); ctx.textAlign='left';
-  }
+  ctx.fillStyle=room.color; ctx.fillRect(rx,ry,rw,rh);
+  ctx.strokeStyle='rgba(0,0,0,0.08)'; ctx.lineWidth=1;
+  const gs=30*sc2;
+  for(let gx=rx;gx<=rx+rw;gx+=gs){ctx.beginPath();ctx.moveTo(gx,ry);ctx.lineTo(gx,ry+rh);ctx.stroke();}
+  for(let gy=ry;gy<=ry+rh;gy+=gs){ctx.beginPath();ctx.moveTo(rx,gy);ctx.lineTo(rx+rw,gy);ctx.stroke();}
+  ctx.strokeStyle='#666'; ctx.lineWidth=3; ctx.strokeRect(rx,ry,rw,rh);
+
   // Nome stanza
   ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
-  ctx.fillText(room.name + ' — ' + (l3.room+1) + '/3', W/2, zoomTop+12); ctx.textAlign='left';
+  ctx.fillText(room.name+' — '+(l3.room+1)+'/3', W/2, zoomTop+10); ctx.textAlign='left';
 
-  // ── HINT: sagoma nella posizione finale ──
-  if (l3.phase === 'push' && l3.obj && l3.hintVisible && Math.floor(l3.hintBlink/8)%2===0) {
-    const hobj = l3.obj;
-    const lastPos = hobj.positions[2];
-    const hox = rx + lastPos.x*sc2, hoy = ry + lastPos.y*sc2;
-    const how = hobj.def.w*sc2, hoh = hobj.def.h*sc2;
-    // Sagoma scura semitrasparente
-    ctx.fillStyle='rgba(0,0,0,0.35)';
-    ctx.fillRect(hox, hoy, how, hoh);
-    ctx.strokeStyle='rgba(180,180,180,0.5)'; ctx.lineWidth=1.5;
-    ctx.strokeRect(hox, hoy, how, hoh);
-    // Emoji scurita
+  // ── HINT sagoma ──
+  if (l3.phase==='push' && l3.obj && l3.hintVisible && Math.floor(l3.hintBlink/8)%2===0) {
+    const ho=l3.obj, lp=ho.positions[2];
+    const hox=rx+lp.x*sc2, hoy=ry+lp.y*sc2, how=ho.w*sc2, hoh=ho.h*sc2;
+    ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fillRect(hox,hoy,how,hoh);
+    ctx.strokeStyle='rgba(200,200,200,0.5)'; ctx.lineWidth=1.5; ctx.strokeRect(hox,hoy,how,hoh);
     ctx.globalAlpha=0.3;
     ctx.font=Math.round(Math.max(how,hoh)*0.9)+'px serif'; ctx.textAlign='center';
-    ctx.fillText(hobj.def.emoji, hox+how/2, hoy+hoh*0.85);
+    ctx.fillText(ho.emoji, hox+how/2, hoy+hoh*0.85);
     ctx.globalAlpha=1; ctx.textAlign='left';
   }
 
-  // ── Oggetti già piazzati ──
+  // ── Oggetti piazzati ──
   l3.placedObjects.forEach(po => {
-    const pw2 = po.w || 32, ph2 = po.h || 32;
-    const pox = rx + po.x*sc2, poy = ry + po.y*sc2;
-    const fs = Math.round(Math.max(pw2,ph2)*sc2*0.85);
-    ctx.font = fs+'px serif'; ctx.textAlign='center';
-    ctx.fillText(po.emoji, pox + pw2*sc2/2, poy + ph2*sc2*0.8);
+    const pw2=po.w||32, ph2=po.h||32;
+    const pox=rx+po.x*sc2, poy=ry+po.y*sc2;
+    const fs=Math.round(Math.max(pw2,ph2)*sc2*0.85);
+    ctx.font=fs+'px serif'; ctx.textAlign='center';
+    ctx.fillText(po.emoji, pox+pw2*sc2/2, poy+ph2*sc2*0.8);
     ctx.textAlign='left';
   });
 
-  // Oggetto principale (grande, scalato)
+  // ── Oggetto corrente ──
   if (l3.obj) {
-    const obj = l3.obj;
-    const ox = rx + obj.x*sc2, oy = ry + obj.y*sc2;
-    const ow = obj.def.w*sc2, oh = obj.def.h*sc2;
-    const nearX = Math.abs((l3.px+9)*sc2 - obj.x*sc2 - ow/2) < ow/2+14*sc2;
-    const nearY = Math.abs((l3.py+9)*sc2 - obj.y*sc2 - oh/2) < oh/2+14*sc2;
-    if (nearX && nearY && l3.phase==='push') {
+    const obj=l3.obj;
+    const ox=rx+obj.x*sc2, oy=ry+obj.y*sc2, ow=obj.w*sc2, oh=obj.h*sc2;
+    const nearX=Math.abs((l3.px+9)*sc2-obj.x*sc2-ow/2)<ow/2+14*sc2;
+    const nearY=Math.abs((l3.py+9)*sc2-obj.y*sc2-oh/2)<oh/2+14*sc2;
+    if (nearX&&nearY&&l3.phase==='push') {
       ctx.fillStyle='rgba(255,230,0,0.15)'; ctx.fillRect(ox-4,oy-4,ow+8,oh+8);
       ctx.strokeStyle='#ffe066'; ctx.lineWidth=2; ctx.strokeRect(ox-4,oy-4,ow+8,oh+8);
       ctx.font='6px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
       ctx.fillText('SPINGI!',ox+ow/2,oy-6); ctx.textAlign='left';
     }
     ctx.font=Math.round(Math.max(ow,oh)*0.9)+'px serif'; ctx.textAlign='center';
-    ctx.fillText(obj.def.emoji, ox+ow/2, oy+oh*0.85); ctx.textAlign='left';
+    ctx.fillText(obj.emoji, ox+ow/2, oy+oh*0.85); ctx.textAlign='left';
   }
 
-  // Bonus object
-  if (l3.bonusObj) {
-    const bx2=rx+l3.bonusObj.x*sc2, by2=ry+l3.bonusObj.y*sc2;
-    ctx.font=Math.round(36*sc2)+'px serif'; ctx.textAlign='center';
-    ctx.fillText(l3.bonusObj.emoji, bx2+16*sc2, by2+28*sc2); ctx.textAlign='left';
-  }
-
-  // ── CARLO (scalato) ──
-  const cs = sc2;
-  const carlox = rx + l3.px*sc2;
-  const carloy = ry + l3.py*sc2;
+  // ── CARLO ──
+  const cs=sc2;
+  const carlox=rx+l3.px*sc2, carloy=ry+l3.py*sc2;
   ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(carlox+9*cs,carloy+21*cs,9*cs,3*cs,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#1e1e1e'; ctx.fillRect(carlox+3*cs,carloy+14*cs,5*cs,7*cs); ctx.fillRect(carlox+10*cs,carloy+14*cs,5*cs,7*cs);
   ctx.fillStyle='#2d5a27'; ctx.fillRect(carlox+2*cs,carloy+20*cs,6*cs,3*cs); ctx.fillRect(carlox+10*cs,carloy+20*cs,6*cs,3*cs);
@@ -2376,8 +2262,8 @@ function drawLevel3() {
   ctx.fillRect(carlox+2*cs,carloy+1*cs,14*cs,5*cs);
   ctx.fillStyle='#5bc8f0'; ctx.fillRect(carlox+5*cs,carloy+6*cs,3*cs,3*cs); ctx.fillRect(carlox+11*cs,carloy+6*cs,3*cs,3*cs);
 
-  // ── ILIA (scalata) ──
-  const iliax = carlox - 18*cs, iliay = carloy + 2*cs;
+  // ── ILIA ──
+  const iliax=carlox-18*cs, iliay=carloy+2*cs;
   ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(iliax+7*cs,iliay+18*cs,7*cs,3*cs,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#141414'; ctx.fillRect(iliax+2*cs,iliay+13*cs,4*cs,6*cs); ctx.fillRect(iliax+8*cs,iliay+13*cs,4*cs,6*cs);
   ctx.fillStyle='#1a1a1a'; ctx.fillRect(iliax+1*cs,iliay+7*cs,12*cs,8*cs);
@@ -2389,25 +2275,27 @@ function drawLevel3() {
 
   // ── DIALOG ILIA ──
   if (l3.iliaDialogTimer > 0) {
-    const bx=10, by=mapY+mapTH+2, bw=W-20, bh=46;
+    const bx=10, by=mapY+mapTH+2, bw=W-20, bh=50;
     ctx.fillStyle='rgba(0,0,10,0.95)'; ctx.fillRect(bx,by,bw,bh);
     ctx.strokeStyle='#ffe066'; ctx.lineWidth=2; ctx.strokeRect(bx,by,bw,bh);
     ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.fillText('ILIA:',bx+8,by+14);
     ctx.fillStyle='#fff';
-    l3.iliaDialog.split('\n').forEach((line,i) => ctx.fillText(line, bx+8, by+28+i*14));
+    l3.iliaDialog.split('\n').forEach((line,i) => ctx.fillText(line,bx+8,by+28+i*14));
+    if (l3.phase==='waiting_ilia'||l3.phase==='done') {
+      ctx.font='6px "Press Start 2P"'; ctx.fillStyle='#888'; ctx.textAlign='center';
+      if (Math.floor(Date.now()/500)%2===0) ctx.fillText('tocca per continuare ▶',W/2,by+bh-6);
+      ctx.textAlign='left';
+    }
   }
 
-  // Hint testo
+  // ── HINT TESTO ──
   if (l3.phase==='push' && l3.iliaDialogTimer===0) {
     ctx.font='6px "Press Start 2P"'; ctx.textAlign='center';
     if (l3.hintVisible) {
       const msgs=['Proviamo...','Chissà....','E se lo mettessimo...?'];
-      const msg = msgs[Math.floor(l3.hintBlink/48)%3];
-      ctx.fillStyle='#aaa';
-      ctx.fillText(msg, W/2, ry+rh+14);
+      ctx.fillStyle='#aaa'; ctx.fillText(msgs[Math.floor(l3.hintBlink/48)%3], W/2, ry+rh+14);
     } else {
-      ctx.fillStyle='#555';
-      ctx.fillText("spingi l'oggetto nella posizione giusta", W/2, ry+rh+14);
+      ctx.fillStyle='#555'; ctx.fillText("spingi l'oggetto nella posizione giusta", W/2, ry+rh+14);
     }
     ctx.textAlign='left';
   }
