@@ -1924,15 +1924,18 @@ const L3_ROOMS = [
 ];
 
 const L3_OBJECTS = [
-  // Salotto
-  { id:'divano',   room:0, emoji:'🛋️',  label:'DIVANO',   w:50, h:28 },
-  { id:'tavolino', room:0, emoji:'☕',   label:'TAVOLINO', w:30, h:30 },
-  // Cameretta
-  { id:'scrivania',room:1, emoji:'🖥️',  label:'SCRIVANIA',w:48, h:30 },
-  { id:'sedia',    room:1, emoji:'🪑',  label:'SEDIA',    w:24, h:24 },
-  // Camera
-  { id:'letto',    room:2, emoji:'🛏️',  label:'LETTO',    w:55, h:40 },
-  { id:'armadio',  room:2, emoji:'🪞',  label:'ARMADIO',  w:30, h:50 },
+  // Salotto: divano, pianta, tappeto
+  { id:'divano',   room:0, seq:0, emoji:'🛋️', label:'DIVANO',   w:52, h:30 },
+  { id:'pianta',   room:0, seq:1, emoji:'🌿', label:'PIANTA',   w:24, h:24 },
+  { id:'tappeto',  room:0, seq:2, emoji:'🟫', label:'TAPPETO',  w:44, h:36 },
+  // Studio: scrivania, libreria, lampada
+  { id:'scrivania',room:1, seq:0, emoji:'🖥️', label:'SCRIVANIA',w:50, h:30 },
+  { id:'libreria', room:1, seq:1, emoji:'📚', label:'LIBRERIA', w:24, h:48 },
+  { id:'lampada',  room:1, seq:2, emoji:'💡', label:'LAMPADA',  w:20, h:20 },
+  // Camera: letto, armadio, comodino
+  { id:'letto',    room:2, seq:0, emoji:'🛏️', label:'LETTO',    w:58, h:44 },
+  { id:'armadio',  room:2, seq:1, emoji:'🚪', label:'ARMADIO',  w:28, h:52 },
+  { id:'comodino', room:2, seq:2, emoji:'🕯️', label:'COMODINO', w:22, h:22 },
 ];
 
 const L3_BONUS_CHOICES = [
@@ -1990,6 +1993,7 @@ function initL3Room(roomIdx) {
   l3.iliaDialog = '';
   l3.iliaDialogTimer = 0;
   l3.bonusObj = null;
+  l3.objSeq = 0;
 
   const room = L3_ROOMS[roomIdx];
   // Carlo al centro sinistra
@@ -1997,7 +2001,7 @@ function initL3Room(roomIdx) {
   l3.py = room.h / 2;
 
   // Oggetto della stanza
-  const objDef = L3_OBJECTS.find(o => o.room === roomIdx) || L3_OBJECTS[roomIdx*2];
+  const objDef = L3_OBJECTS.find(o => o.room === roomIdx && o.seq === 0);
   const positions = randomPositions(room.w, room.h, objDef.w, objDef.h);
   l3.obj = {
     def: objDef,
@@ -2107,8 +2111,33 @@ function chooseL3Bonus(choice) {
   const room = L3_ROOMS[l3.room];
   // Piazza il bonus al centro della stanza
   l3.bonusObj = { emoji: choice.emoji, x: room.w/2 - 16, y: room.h/2 - 16 };
-  l3.iliaDialog = 'Perfetto!\nOra esci dalla\nstanza →';
-  l3.iliaDialogTimer = 240;
+  if (l3.objSeq < 2) {
+    // Ancora oggetti da piazzare in questa stanza
+    l3.objSeq++;
+    l3.iliaDialog = 'SPLENDIDO!\nè ESATTAMENTE\nCOME LO IMMAGINAVO!';
+    l3.iliaDialogTimer = 200;
+    // Carica prossimo oggetto dopo il dialogo
+    setTimeout(() => {
+      const nextDef = L3_OBJECTS.find(o => o.room === l3.room && o.seq === l3.objSeq);
+      if (nextDef) {
+        const room2 = L3_ROOMS[l3.room];
+        const positions = randomPositions(room2.w, room2.h, nextDef.w, nextDef.h);
+        l3.obj = { def:nextDef, x:positions[0].x, y:positions[0].y, positions, posIdx:0, placed:false };
+        l3.bonusObj = null;
+        l3.phase = 'push';
+        l3.choiceDone = false;
+      }
+    }, 2200);
+  } else {
+    // Tutti e 3 gli oggetti piazzati!
+    l3.iliaDialog = 'SPLENDIDO!\nè ESATTAMENTE\nCOME LO IMMAGINAVO!';
+    l3.iliaDialogTimer = 200;
+    setTimeout(() => {
+      l3.iliaDialog = 'Ora passiamo\nalla prossima\nstanza →';
+      l3.iliaDialogTimer = 200;
+      setTimeout(() => nextL3Room(), 2200);
+    }, 2200);
+  }
 }
 
 function nextL3Room() {
@@ -2151,26 +2180,54 @@ function drawLevel3() {
   ctx.fillRect(0, 0, W, H);
 
   // ── PLANIMETRIA IN ALTO ──
+  // Planimetria reale della casa (basata sulla pianta caricata)
+  // Stanze giocabili: SALOTTO (0), STUDIO/CAMERETTA (1), CAMERA DA LETTO (2)
   const mapLayout = [
-    {name:'SALOTTO', x:0,   y:0,   w:180, h:140, color:'#f5f0e8'},
-    {name:'STUDIO',  x:180, y:0,   w:140, h:120, color:'#eef0f5'},
-    {name:'CAMERA',  x:0,   y:140, w:160, h:160, color:'#f5eef0'},
+    // Muri esterni e stanze non giocabili (grigio scuro)
+    {name:'',         x:0,   y:0,   w:200, h:170, color:'#1a1a22', play:false}, // salone area
+    {name:'',         x:0,   y:170, w:110, h:110, color:'#1a1a22', play:false}, // cucina area
+    {name:'',         x:110, y:170, w:90,  h:110, color:'#131318', play:false}, // disimpegno
+    {name:'',         x:200, y:0,   w:140, h:90,  color:'#1a1a22', play:false}, // cam1 area
+    {name:'',         x:200, y:90,  w:140, h:190, color:'#1a1a22', play:false}, // cam2 area
+    // Stanze giocabili (colorate e illuminate)
+    {name:'SALOTTO',          x:10,  y:10,  w:180, h:150, color:'#f5f0e8', play:true,  roomIdx:0},
+    {name:'CAMERETTA/STUDIO', x:205, y:5,   w:130, h:80,  color:'#eef0f5', play:true,  roomIdx:1},
+    {name:'CAMERA DA LETTO',  x:205, y:95,  w:130, h:175, color:'#f5eef0', play:true,  roomIdx:2},
+    // Cucina (non giocabile ma visibile)
+    {name:'CUCINA',   x:5,   y:175, w:100, h:100, color:'#f0f0e8', play:false},
+    // Bagno (piccolo)
+    {name:'BAGNO',    x:115, y:175, w:80,  h:100, color:'#e8f0f5', play:false},
   ];
-  const msc = 0.28;
-  const mapTW = 320*msc, mapTH = 300*msc;
+  const msc = 0.24;
+  const mapTW = 340*msc, mapTH = 280*msc;
   const mapX = (W-mapTW)/2, mapY = 48;
   ctx.fillStyle='#111118'; ctx.fillRect(mapX-2,mapY-2,mapTW+4,mapTH+4);
   mapLayout.forEach((mr,i) => {
     const sx=mapX+mr.x*msc, sy=mapY+mr.y*msc, sw=mr.w*msc, sh=mr.h*msc;
-    ctx.fillStyle = i<l3.room ? '#1a3a1a' : i===l3.room ? mr.color : '#111118';
-    ctx.fillRect(sx,sy,sw,sh);
-    ctx.strokeStyle = i===l3.room ? '#ffe066' : '#333';
-    ctx.lineWidth = i===l3.room ? 2 : 1;
-    ctx.strokeRect(sx,sy,sw,sh);
-    ctx.font='5px "Press Start 2P"'; ctx.textAlign='center';
-    ctx.fillStyle = i===l3.room ? '#ffe066' : i<l3.room ? '#44ff44' : '#444';
-    ctx.fillText(i<l3.room ? '✓' : mr.name.substring(0,6), sx+sw/2, sy+sh/2+2);
-    ctx.textAlign='left';
+    if (!mr.play) {
+      // Stanza non giocabile
+      ctx.fillStyle = mr.color || '#1a1a22';
+      ctx.fillRect(sx,sy,sw,sh);
+      ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=1;
+      ctx.strokeRect(sx,sy,sw,sh);
+      if (mr.name) {
+        ctx.font='4px "Press Start 2P"'; ctx.fillStyle='#444'; ctx.textAlign='center';
+        ctx.fillText(mr.name, sx+sw/2, sy+sh/2+2); ctx.textAlign='left';
+      }
+    } else {
+      const ri = mr.roomIdx;
+      const active = ri === l3.room;
+      const done = ri < l3.room;
+      ctx.fillStyle = done ? '#1a3a1a' : active ? mr.color : '#111118';
+      ctx.fillRect(sx,sy,sw,sh);
+      ctx.strokeStyle = active ? '#ffe066' : done ? '#44ff44' : '#333';
+      ctx.lineWidth = active ? 2 : 1;
+      ctx.strokeRect(sx,sy,sw,sh);
+      ctx.font='4px "Press Start 2P"'; ctx.textAlign='center';
+      ctx.fillStyle = active ? '#ffe066' : done ? '#44ff44' : '#555';
+      ctx.fillText(done ? '✓' : mr.name.substring(0,8), sx+sw/2, sy+sh/2+2);
+      ctx.textAlign='left';
+    }
   });
 
   // ── STANZA ZOOM ──
@@ -2201,7 +2258,7 @@ function drawLevel3() {
   }
   // Nome stanza
   ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
-  ctx.fillText(room.name + ' — ' + (l3.room+1) + '/3', W/2, zoomTop-4); ctx.textAlign='left';
+  ctx.fillText(room.name + ' — ' + (l3.room+1) + '/3', W/2, zoomTop+12); ctx.textAlign='left';
 
   // Oggetto principale (grande, scalato)
   if (l3.obj) {
