@@ -2021,6 +2021,7 @@ function resetL3Room() {
 
 function updateLevel3() {
   if (!l3.active || state !== 'playing' || level !== 3) return;
+  if (l3.phase === 'room_done' || l3.phase === 'choice') return;
   if (l3.iliaDialogTimer > 0) l3.iliaDialogTimer--;
 
   const room = L3_ROOMS[l3.room];
@@ -2072,10 +2073,10 @@ function updateLevel3() {
     }
   }
 
-  // Dopo bonus piazzato: esce a destra della stanza
+  // Dopo bonus piazzato: esce a destra → prossimo oggetto o prossima stanza
   if (l3.phase === 'bonus_place' && l3.bonusObj) {
     if (l3.px > room.w - 18) {
-      nextL3Room();
+      nextObjOrRoom();
     }
   }
 
@@ -2109,34 +2110,35 @@ function chooseL3Bonus(choice) {
   l3.choiceDone = true;
   l3.phase = 'bonus_place';
   const room = L3_ROOMS[l3.room];
-  // Piazza il bonus al centro della stanza
-  l3.bonusObj = { emoji: choice.emoji, x: room.w/2 - 16, y: room.h/2 - 16 };
+  // Bonus appare vicino al centro, da piazzare liberamente
+  l3.bonusObj = { emoji: choice.emoji, x: room.w/2 - 16, y: room.h/2 + 20 };
+  l3.iliaDialog = 'Bene!\nOra mettilo\ndove vuoi →';
+  l3.iliaDialogTimer = 120;
+  // NON carichiamo il prossimo oggetto qui — lo facciamo quando l'utente
+  // esce a destra della stanza (in nextObjOrRoom)
+}
+
+function nextObjOrRoom() {
+  // Chiamata quando player esce a destra dopo aver piazzato il bonus
   if (l3.objSeq < 2) {
-    // Ancora oggetti da piazzare in questa stanza
+    // Carica prossimo oggetto nella stessa stanza
     l3.objSeq++;
-    l3.iliaDialog = 'SPLENDIDO!\nè ESATTAMENTE\nCOME LO IMMAGINAVO!';
-    l3.iliaDialogTimer = 200;
-    // Carica prossimo oggetto dopo il dialogo
-    setTimeout(() => {
-      const nextDef = L3_OBJECTS.find(o => o.room === l3.room && o.seq === l3.objSeq);
-      if (nextDef) {
-        const room2 = L3_ROOMS[l3.room];
-        const positions = randomPositions(room2.w, room2.h, nextDef.w, nextDef.h);
-        l3.obj = { def:nextDef, x:positions[0].x, y:positions[0].y, positions, posIdx:0, placed:false };
-        l3.bonusObj = null;
-        l3.phase = 'push';
-        l3.choiceDone = false;
-      }
-    }, 2200);
+    l3.choiceDone = false;
+    l3.bonusObj = null;
+    l3.phase = 'push';
+    const nextDef = L3_OBJECTS.find(o => o.room === l3.room && o.seq === l3.objSeq);
+    if (nextDef) {
+      const room2 = L3_ROOMS[l3.room];
+      const positions = randomPositions(room2.w, room2.h, nextDef.w, nextDef.h);
+      l3.obj = { def:nextDef, x:positions[0].x, y:positions[0].y, positions, posIdx:0, placed:false };
+    }
+    l3.px = 10; l3.py = L3_ROOMS[l3.room].h/2;
   } else {
-    // Tutti e 3 gli oggetti piazzati!
-    l3.iliaDialog = 'SPLENDIDO!\nè ESATTAMENTE\nCOME LO IMMAGINAVO!';
-    l3.iliaDialogTimer = 200;
-    setTimeout(() => {
-      l3.iliaDialog = 'Ora passiamo\nalla prossima\nstanza →';
-      l3.iliaDialogTimer = 200;
-      setTimeout(() => nextL3Room(), 2200);
-    }, 2200);
+    // Tutti e 3 completati → SPLENDIDO → prossima stanza
+    l3.iliaDialog = 'SPLENDIDO!\nE ESATTAMENTE\nCOME LO IMMAGINAVO!';
+    l3.iliaDialogTimer = 240;
+    l3.phase = 'room_done';
+    setTimeout(() => nextL3Room(), 2600);
   }
 }
 
