@@ -1385,6 +1385,12 @@ function handleGuruTap() {
     nextL3Room();
     return;
   }
+  // Level 3: waiting_next → prossimo oggetto al tap
+  if (level === 3 && l3.phase === 'waiting_next') {
+    l3.iliaDialogTimer = 0;
+    nextObjOrRoom();
+    return;
+  }
   // Level 3: waiting_ilia → apri scelta oggetto al tap
   if (level === 3 && l3.phase === 'waiting_ilia') {
     l3.iliaDialogTimer = 0;
@@ -2047,7 +2053,7 @@ function resetL3Room() {
 
 function updateLevel3() {
   if (!l3.active || state !== 'playing' || level !== 3) return;
-  if (l3.phase === 'room_done' || l3.phase === 'choice' || l3.phase === 'waiting_ilia') return;
+  if (l3.phase === 'room_done' || l3.phase === 'choice' || l3.phase === 'waiting_ilia' || l3.phase === 'waiting_next') return;
   if (l3.iliaDialogTimer > 0) l3.iliaDialogTimer--;
 
   const room = L3_ROOMS[l3.room];
@@ -2111,12 +2117,7 @@ function updateLevel3() {
     }
   }
 
-  // Dopo bonus piazzato: esce a destra SOLO se ha un bonus
-  if (l3.phase === 'bonus_place' && l3.bonusObj !== null) {
-    if (l3.px > room.w - 22) {
-      nextObjOrRoom();
-    }
-  }
+  // bonus_place: avanza al tap (gestito in handleGuruTap)
 
   // Powerup = reset
   if (powerupPressed) {
@@ -2146,20 +2147,22 @@ function chooseL3Bonus(choice) {
   const _ui = document.getElementById('l3choiceUI'); if(_ui) _ui.style.display = 'none';
   l3.chosenBonus = choice;
   l3.choiceDone = true;
-  l3.phase = 'bonus_place';
+  // Bonus appare in posizione random nella stanza
   const room = L3_ROOMS[l3.room];
-  // Bonus appare vicino al centro, da piazzare liberamente
-  l3.bonusObj = { emoji: choice.emoji, x: room.w/2 - 16, y: room.h/2 + 20 };
-  l3.iliaDialog = '';
-  l3.iliaDialogTimer = 0;
+  const bx = 20 + Math.random()*(room.w-60);
+  const by = 20 + Math.random()*(room.h-60);
+  l3.bonusObj = { emoji: choice.emoji, x: Math.round(bx), y: Math.round(by), w:32, h:32 };
+  // Salva subito e passa a waiting_next
+  l3.phase = 'waiting_next';
+  l3.iliaDialog = 'Ottima scelta!\nTocca per continuare';
+  l3.iliaDialogTimer = 999;
 }
 
 function nextObjOrRoom() {
-  // Chiamata quando player esce a destra dopo aver piazzato il bonus
   if (l3.objSeq < 2) {
-    // Salva obj e bonus correnti prima di passare al prossimo
-    if (l3.obj) l3.placedObjects.push({type:'obj', emoji:l3.obj.def.emoji, x:l3.obj.x, y:l3.obj.y, w:l3.obj.def.w, h:l3.obj.def.h});
-    if (l3.bonusObj) l3.placedObjects.push({type:'bonus', emoji:l3.bonusObj.emoji, x:l3.bonusObj.x, y:l3.bonusObj.y});
+    // Salva obj e bonus già posizionati
+    if (l3.obj) l3.placedObjects.push({emoji:l3.obj.def.emoji, x:l3.obj.x, y:l3.obj.y, w:l3.obj.def.w, h:l3.obj.def.h});
+    if (l3.bonusObj) l3.placedObjects.push({emoji:l3.bonusObj.emoji, x:l3.bonusObj.x, y:l3.bonusObj.y, w:32, h:32});
     // Carica prossimo oggetto nella stessa stanza
     l3.objSeq++;
     l3.choiceDone = false;
@@ -2178,7 +2181,7 @@ function nextObjOrRoom() {
     l3.iliaDialog = 'SPLENDIDO!\nE ESATTAMENTE\nCOME LO IMMAGINAVO!';
     l3.iliaDialogTimer = 240;
     l3.phase = 'room_done';
-    setTimeout(() => nextL3Room(), 2600);
+    // nextL3Room al tap
   }
 }
 
@@ -2320,13 +2323,13 @@ function drawLevel3() {
     ctx.globalAlpha=1; ctx.textAlign='left';
   }
 
-  // ── Oggetti già piazzati (mantenuti visibili) ──
+  // ── Oggetti già piazzati ──
   l3.placedObjects.forEach(po => {
     const pw2 = po.w || 32, ph2 = po.h || 32;
     const pox = rx + po.x*sc2, poy = ry + po.y*sc2;
-    const fontSize = Math.round(Math.max(pw2,ph2)*sc2*0.9);
-    ctx.font = fontSize+'px serif'; ctx.textAlign='center';
-    ctx.fillText(po.emoji, pox + pw2*sc2/2, poy + ph2*sc2*0.85);
+    const fs = Math.round(Math.max(pw2,ph2)*sc2*0.85);
+    ctx.font = fs+'px serif'; ctx.textAlign='center';
+    ctx.fillText(po.emoji, pox + pw2*sc2/2, poy + ph2*sc2*0.8);
     ctx.textAlign='left';
   });
 
