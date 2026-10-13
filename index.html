@@ -71,17 +71,31 @@
   <span id="powerupInfo">📱 x<span id="powerupCount">3</span></span>
 </div>
 <div id="controls">
-  <div class="btnGroup">
-    <div class="ctrlBtn" id="btnLeft">◀</div>
-    <div class="ctrlBtn" id="btnRight">▶</div>
+  <!-- Controlli normali (livelli 1 e 2) -->
+  <div id="ctrlNormal" style="display:flex;gap:12px;align-items:center;justify-content:center;width:100%;">
+    <div class="btnGroup">
+      <div class="ctrlBtn" id="btnLeft">◀</div>
+      <div class="ctrlBtn" id="btnRight">▶</div>
+    </div>
+    <div class="btnGroup">
+      <div class="ctrlBtn" id="btnPowerup"><span id="powerupEmoji">📱</span><span id="healLabel">CHIAMA</span></div>
+      <div class="ctrlBtn" id="btnJump">▲</div>
+    </div>
   </div>
-  <div class="btnGroup">
-    <div class="ctrlBtn" id="btnPowerup"><span id="powerupEmoji">📱</span><span id="healLabel">CHIAMA</span></div>
-    <div class="ctrlBtn" id="btnJump">▲</div>
-  </div>
-  <div class="btnGroup" id="btnGroupUD" style="display:none;">
-    <div class="ctrlBtn" id="btnUp">▲</div>
-    <div class="ctrlBtn" id="btnDown">▼</div>
+  <!-- D-pad livello 3 -->
+  <div id="ctrlL3" style="display:none;align-items:center;justify-content:center;width:100%;gap:20px;">
+    <div style="display:grid;grid-template-columns:52px 52px 52px;grid-template-rows:52px 52px 52px;gap:4px;">
+      <div></div>
+      <div class="ctrlBtn" id="btnUp" style="display:flex;">▲</div>
+      <div></div>
+      <div class="ctrlBtn" id="btnLeft2" style="display:flex;">◀</div>
+      <div style="width:52px;height:52px;"></div>
+      <div class="ctrlBtn" id="btnRight2" style="display:flex;">▶</div>
+      <div></div>
+      <div class="ctrlBtn" id="btnDown" style="display:flex;">▼</div>
+      <div></div>
+    </div>
+    <div class="ctrlBtn" id="btnPowerupL3"><span id="powerupEmojiL3">🔄</span><span style="font-size:7px;display:block">RESET</span></div>
   </div>
 </div>
 
@@ -1393,8 +1407,8 @@ function handleGuruTap() {
         l3.active = false;
         document.getElementById('screenGameWin').classList.remove('hidden');
         state = 'win3';
-        document.getElementById('btnGroupUD').style.display = 'none';
-        document.getElementById('btnJump').style.display = 'flex';
+        document.getElementById('ctrlNormal').style.display = 'flex';
+        document.getElementById('ctrlL3').style.display = 'none';
       } else {
         initL3Room(l3.room + 1);
       }
@@ -2003,14 +2017,14 @@ function startLevel3() {
   level = 3;
   state = 'playing';
   l3.active = true;
-  // Mostra frecce su/giù, nascondi salto
-  document.getElementById('btnGroupUD').style.display = 'flex';
-  document.getElementById('btnJump').style.display = 'none';
+  document.getElementById('ctrlNormal').style.display = 'none';
+  document.getElementById('ctrlL3').style.display = 'flex';
   initL3Room(0);
   const em = document.getElementById('powerupEmoji');
   const hl = document.getElementById('healLabel');
   if (em) em.textContent = '🔄';
   if (hl) hl.textContent = 'RESET';
+  const emL3=document.getElementById('powerupEmojiL3'); if(emL3) emL3.textContent='🔄';
 }
 
 function initL3Room(roomIdx) {
