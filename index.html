@@ -2053,7 +2053,7 @@ function resetL3Room() {
 
 function updateLevel3() {
   if (!l3.active || state !== 'playing' || level !== 3) return;
-  if (l3.phase === 'room_done' || l3.phase === 'choice' || l3.phase === 'waiting_ilia' || l3.phase === 'waiting_next') return;
+  if (l3.phase === 'room_done' || l3.phase === 'choice' || l3.phase === 'processing' || l3.phase === 'waiting_ilia' || l3.phase === 'waiting_next') return;
   if (l3.iliaDialogTimer > 0) l3.iliaDialogTimer--;
 
   const room = L3_ROOMS[l3.room];
@@ -2144,7 +2144,9 @@ function showL3Choices() {
 }
 
 function chooseL3Bonus(choice) {
+  if (l3.phase !== 'choice') return; // guard: evita doppia chiamata
   const _ui = document.getElementById('l3choiceUI'); if(_ui) _ui.style.display = 'none';
+  l3.phase = 'processing'; // blocca subito
   l3.chosenBonus = choice;
   l3.choiceDone = true;
   const room = L3_ROOMS[l3.room];
