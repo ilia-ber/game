@@ -405,12 +405,10 @@ function drawIliaHair(brown) {
   const w = 56;
   const h = 104;
   let img;
-  if (level >= 2 && brown) {
-    // Dal livello 2 in poi: castana, con corsa se si muove
-    const iliaMoving = Math.abs(ilia.x - (player.x - 55)) > 3;
+  if (brown && (level >= 2 || state === 'cutscene')) {
+    const iliaMoving = level >= 2 && Math.abs(ilia.x - (player.x - 55)) > 3;
     img = iliaMoving ? imgIliaRun : imgIliaBrown;
   } else {
-    // Livello 1 e cutscene: sempre rosa ferma
     img = imgIliaPink;
   }
   // Nel livello 1 fine (Ilia ferma), guardare verso Carlo (flip=true = guarda sx)
@@ -1026,13 +1024,7 @@ function drawCutscene() {
 
   drawBackground();
   obstacles.forEach(drawObstacle);
-  // draw Ilia nella cutscene
-  const cutsceneIliaImg = cutscene.iliaHairBrown ? imgIliaBrown : imgIliaPink;
-  const csx = Math.round(cutscene.iliaX);
-  const csy = Math.round(cutscene.iliaY);
-  if (!drawSprite(cutsceneIliaImg, csx - 28, csy - 104, 56, 104, false)) {
-    drawIliaHair(cutscene.iliaHairBrown);
-  }
+  drawIliaHair(cutscene.iliaHairBrown);
   drawCarlo();
 
   // puff particles
