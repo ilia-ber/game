@@ -82,8 +82,12 @@
       <div class="ctrlBtn" id="btnJump">▲</div>
     </div>
   </div>
-  <!-- D-pad livello 3 -->
-  <div id="ctrlL3" style="display:none;align-items:center;justify-content:center;width:100%;gap:16px;">
+  <!-- Reset standalone L3 -->
+  <div id="ctrlL3Reset" style="display:none;align-items:center;justify-content:center;width:100%;">
+    <div class="ctrlBtn" id="btnPowerupL3" style="width:64px;height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;"><span id="powerupEmojiL3">🔄</span><span style="font-size:7px;">RESET</span></div>
+  </div>
+  <!-- D-pad livello 3 (nascosto - si usa drag) -->
+  <div id="ctrlL3" style="display:none!important;align-items:center;justify-content:center;width:100%;gap:16px;">
     <div style="position:relative;width:120px;height:120px;">
       <div class="ctrlBtn" id="btnUp"     style="position:absolute;top:0;left:35px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">▲</div>
       <div class="ctrlBtn" id="btnLeft2"  style="position:absolute;top:35px;left:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">◀</div>
@@ -1415,7 +1419,7 @@ function handleGuruTap() {
         document.getElementById('screenGameWin').classList.remove('hidden');
         state = 'win3';
         document.getElementById('ctrlNormal').style.display = 'flex';
-        document.getElementById('ctrlL3').style.display = 'none';
+        document.getElementById('ctrlL3Reset').style.display = 'none';
       } else {
         initL3Room(l3.room + 1);
       }
@@ -2025,7 +2029,7 @@ function startLevel3() {
   state = 'playing';
   l3.active = true;
   document.getElementById('ctrlNormal').style.display = 'none';
-  document.getElementById('ctrlL3').style.display = 'flex';
+  document.getElementById('ctrlL3Reset').style.display = 'flex';
   initL3Room(0);
   const em = document.getElementById('powerupEmoji');
   const hl = document.getElementById('healLabel');
@@ -2317,9 +2321,6 @@ function drawLevel3() {
     }
   }
 
-  // DEBUG frecce
-  ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ff0'; ctx.textAlign='left';
-  ctx.fillText('U:'+upPressed+' D:'+downPressed+' L:'+leftPressed+' R:'+rightPressed, 10, 120);
   // ── HINT TESTO ──
   if (l3.phase==='push' && l3.iliaDialogTimer===0) {
     ctx.font='6px "Press Start 2P"'; ctx.textAlign='center';
