@@ -71,7 +71,7 @@
   <span id="powerupInfo">📱 x<span id="powerupCount">3</span></span>
 </div>
 <div id="controls">
-  <!-- Controlli normali (livelli 1 e 2) -->
+  <!-- Controlli normali L1/L2 -->
   <div id="ctrlNormal" style="display:flex;gap:12px;align-items:center;justify-content:center;width:100%;">
     <div class="btnGroup">
       <div class="ctrlBtn" id="btnLeft">◀</div>
@@ -82,21 +82,18 @@
       <div class="ctrlBtn" id="btnJump">▲</div>
     </div>
   </div>
-  <!-- Reset standalone L3 -->
-  <div id="ctrlL3Reset" style="display:none;align-items:center;justify-content:center;width:100%;">
-    <div class="ctrlBtn" id="btnPowerupL3" style="width:64px;height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;"><span id="powerupEmojiL3">🔄</span><span style="font-size:7px;">RESET</span></div>
-  </div>
-  <!-- D-pad livello 3 (nascosto - si usa drag) -->
-  <div id="ctrlL3" style="display:none!important;align-items:center;justify-content:center;width:100%;gap:16px;">
-    <div style="position:relative;width:120px;height:120px;">
-      <div class="ctrlBtn" id="btnUp"     style="position:absolute;top:0;left:35px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">▲</div>
-      <div class="ctrlBtn" id="btnLeft2"  style="position:absolute;top:35px;left:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">◀</div>
-      <div class="ctrlBtn" id="btnRight2" style="position:absolute;top:35px;right:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">▶</div>
-      <div class="ctrlBtn" id="btnDown"   style="position:absolute;bottom:0;left:35px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">▼</div>
+  <!-- Croce L3 - sempre nel DOM, visibilità via opacity/pointerEvents -->
+  <div id="ctrlL3pad" style="display:flex;align-items:center;justify-content:center;width:100%;gap:24px;opacity:0;pointer-events:none;position:absolute;">
+    <div style="position:relative;width:114px;height:114px;flex-shrink:0;">
+      <div class="ctrlBtn" id="btnJumpL3"  style="position:absolute;top:0;left:35px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">▲</div>
+      <div class="ctrlBtn" id="btnLeftL3"  style="position:absolute;top:35px;left:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">◀</div>
+      <div class="ctrlBtn" id="btnRightL3" style="position:absolute;top:35px;right:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">▶</div>
+      <div class="ctrlBtn" id="btnDown2"   style="position:absolute;bottom:0;left:35px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;">▼</div>
     </div>
-    <div class="ctrlBtn" id="btnPowerupL3" style="width:52px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;"><span id="powerupEmojiL3">🔄</span><span style="font-size:6px;">RESET</span></div>
+    <div class="ctrlBtn" id="btnPowerupL3" style="width:52px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;"><span id="powerupEmojiL3">🔄</span><span style="font-size:6px;">RESET</span></div>
   </div>
 </div>
+
 
 <div class="overlay" id="screenStart">
   <h1>CARLO'S<br/>QUEST ♥</h1>
@@ -823,18 +820,16 @@ function hold(el,down,up) {
   el.addEventListener('mouseup',    e=>{up();});
   el.addEventListener('mouseleave', e=>{up();});
 }
-hold(document.getElementById('btnLeft'),  ()=>leftPressed=true,  ()=>leftPressed=false);
-hold(document.getElementById('btnRight'), ()=>rightPressed=true, ()=>rightPressed=false);
-hold(document.getElementById('btnJump'),  ()=>jumpPressed=true,  ()=>jumpPressed=false);
-hold(document.getElementById('btnPowerup'),()=>powerupPressed=true,()=>powerupPressed=false);
-// L3 D-pad
-hold(document.getElementById('btnUp'),    ()=>upPressed=true,    ()=>upPressed=false);
-hold(document.getElementById('btnDown'),  ()=>downPressed=true,  ()=>downPressed=false);
-hold(document.getElementById('btnLeft2'), ()=>leftPressed=true,  ()=>leftPressed=false);
-hold(document.getElementById('btnRight2'),()=>rightPressed=true, ()=>rightPressed=false);
-document.getElementById('btnPowerupL3').addEventListener('touchstart', e=>{e.preventDefault();powerupPressed=true;});
-document.getElementById('btnPowerupL3').addEventListener('touchend',   ()=>powerupPressed=false);
-document.getElementById('btnPowerupL3').addEventListener('click',      ()=>{powerupPressed=true;});
+hold(document.getElementById('btnLeft'),    ()=>leftPressed=true,    ()=>leftPressed=false);
+hold(document.getElementById('btnRight'),   ()=>rightPressed=true,   ()=>rightPressed=false);
+hold(document.getElementById('btnJump'),    ()=>{jumpPressed=true; upPressed=true;},   ()=>{jumpPressed=false; upPressed=false;});
+hold(document.getElementById('btnPowerup'), ()=>powerupPressed=true, ()=>powerupPressed=false);
+// L3 croce
+hold(document.getElementById('btnJumpL3'),  ()=>upPressed=true,      ()=>upPressed=false);
+hold(document.getElementById('btnDown2'),   ()=>downPressed=true,    ()=>downPressed=false);
+hold(document.getElementById('btnLeftL3'),  ()=>leftPressed=true,    ()=>leftPressed=false);
+hold(document.getElementById('btnRightL3'), ()=>rightPressed=true,   ()=>rightPressed=false);
+hold(document.getElementById('btnPowerupL3'),()=>powerupPressed=true,()=>powerupPressed=false);
 
 window.addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft')  leftPressed=true;
@@ -2028,8 +2023,10 @@ function startLevel3() {
   level = 3;
   state = 'playing';
   l3.active = true;
-  document.getElementById('ctrlNormal').style.display = 'none';
-  document.getElementById('ctrlL3Reset').style.display = 'flex';
+  const cn=document.getElementById('ctrlNormal');
+  cn.style.opacity='0'; cn.style.pointerEvents='none'; cn.style.position='absolute';
+  const cl=document.getElementById('ctrlL3pad');
+  cl.style.opacity='1'; cl.style.pointerEvents='auto'; cl.style.position='relative';
   initL3Room(0);
   const em = document.getElementById('powerupEmoji');
   const hl = document.getElementById('healLabel');
