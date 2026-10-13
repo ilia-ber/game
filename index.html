@@ -1951,8 +1951,12 @@ let l3 = {
   // Player top-down
   px: 0, py: 0, pspeed: 2.5,
   // Oggetto corrente
-  obj: null,        // {x,y,w,h,pushed,positions,posIdx}
-  bonusObj: null,
+  obj: null,        // oggetto corrente da spingere
+  bonusObj: null,   // bonus corrente da piazzare
+  placedObjects: [],// tutti gli obj+bonus già piazzati in questa stanza
+  hintTimer: 0,      // secondi da quando si spinge l'oggetto
+  hintVisible: false,
+  hintBlink: 0,
   // Scelta bonus
   choiceDone: false,
   chosenBonus: null,
@@ -1994,6 +1998,8 @@ function initL3Room(roomIdx) {
   l3.iliaDialogTimer = 0;
   l3.bonusObj = null;
   l3.objSeq = 0;
+  l3.placedObjects = [];
+  l3.hintTimer = 0; l3.hintVisible = false; l3.hintBlink = 0;
 
   const room = L3_ROOMS[roomIdx];
   // Carlo al centro sinistra
@@ -2034,6 +2040,18 @@ function updateLevel3() {
   if (rightPressed) dx =  speed;
   if (upPressed)   dy = -speed;
   if (downPressed) dy =  speed;
+
+  // Hint timer — conta frames mentre si spinge
+  if (l3.phase === 'push' && l3.obj && !l3.obj.placed) {
+    l3.hintTimer++;
+    if (l3.hintTimer === 600) { // 10 secondi
+      l3.hintVisible = true;
+      l3.hintBlink = 0;
+      // Scompare dopo 3 secondi (180 frames)
+      setTimeout(() => { l3.hintVisible = false; l3.hintTimer = 0; }, 3000);
+    }
+    if (l3.hintVisible) l3.hintBlink++;
+  }
 
   // Spinge oggetto se vicino
   if (l3.phase === 'push' && l3.obj && !l3.obj.placed) {
@@ -2121,6 +2139,9 @@ function chooseL3Bonus(choice) {
 function nextObjOrRoom() {
   // Chiamata quando player esce a destra dopo aver piazzato il bonus
   if (l3.objSeq < 2) {
+    // Salva obj e bonus correnti prima di passare al prossimo
+    if (l3.obj) l3.placedObjects.push({type:'obj', emoji:l3.obj.def.emoji, x:l3.obj.x, y:l3.obj.y, w:l3.obj.def.w, h:l3.obj.def.h});
+    if (l3.bonusObj) l3.placedObjects.push({type:'bonus', emoji:l3.bonusObj.emoji, x:l3.bonusObj.x, y:l3.bonusObj.y});
     // Carica prossimo oggetto nella stessa stanza
     l3.objSeq++;
     l3.choiceDone = false;
@@ -2133,6 +2154,7 @@ function nextObjOrRoom() {
       l3.obj = { def:nextDef, x:positions[0].x, y:positions[0].y, positions, posIdx:0, placed:false };
     }
     l3.px = 10; l3.py = L3_ROOMS[l3.room].h/2;
+    l3.hintTimer = 0; l3.hintVisible = false; l3.hintBlink = 0;
   } else {
     // Tutti e 3 completati → SPLENDIDO → prossima stanza
     l3.iliaDialog = 'SPLENDIDO!\nE ESATTAMENTE\nCOME LO IMMAGINAVO!';
@@ -2262,6 +2284,34 @@ function drawLevel3() {
   ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
   ctx.fillText(room.name + ' — ' + (l3.room+1) + '/3', W/2, zoomTop+12); ctx.textAlign='left';
 
+  // ── HINT: sagoma nella posizione finale ──
+  if (l3.phase === 'push' && l3.obj && l3.hintVisible && Math.floor(l3.hintBlink/8)%2===0) {
+    const hobj = l3.obj;
+    const lastPos = hobj.positions[2];
+    const hox = rx + lastPos.x*sc2, hoy = ry + lastPos.y*sc2;
+    const how = hobj.def.w*sc2, hoh = hobj.def.h*sc2;
+    // Sagoma scura semitrasparente
+    ctx.fillStyle='rgba(0,0,0,0.35)';
+    ctx.fillRect(hox, hoy, how, hoh);
+    ctx.strokeStyle='rgba(180,180,180,0.5)'; ctx.lineWidth=1.5;
+    ctx.strokeRect(hox, hoy, how, hoh);
+    // Emoji scurita
+    ctx.globalAlpha=0.3;
+    ctx.font=Math.round(Math.max(how,hoh)*0.9)+'px serif'; ctx.textAlign='center';
+    ctx.fillText(hobj.def.emoji, hox+how/2, hoy+hoh*0.85);
+    ctx.globalAlpha=1; ctx.textAlign='left';
+  }
+
+  // ── Oggetti già piazzati (mantenuti visibili) ──
+  l3.placedObjects.forEach(po => {
+    const pw2 = po.w || 32, ph2 = po.h || 32;
+    const pox = rx + po.x*sc2, poy = ry + po.y*sc2;
+    const fontSize = Math.round(Math.max(pw2,ph2)*sc2*0.9);
+    ctx.font = fontSize+'px serif'; ctx.textAlign='center';
+    ctx.fillText(po.emoji, pox + pw2*sc2/2, poy + ph2*sc2*0.85);
+    ctx.textAlign='left';
+  });
+
   // Oggetto principale (grande, scalato)
   if (l3.obj) {
     const obj = l3.obj;
@@ -2320,10 +2370,19 @@ function drawLevel3() {
     l3.iliaDialog.split('\n').forEach((line,i) => ctx.fillText(line, bx+8, by+28+i*14));
   }
 
-  // Hint
+  // Hint testo
   if (l3.phase==='push' && l3.iliaDialogTimer===0) {
-    ctx.font='6px "Press Start 2P"'; ctx.fillStyle='#666'; ctx.textAlign='center';
-    ctx.fillText("spingi l'oggetto a destra →", W/2, ry+rh+14); ctx.textAlign='left';
+    ctx.font='6px "Press Start 2P"'; ctx.textAlign='center';
+    if (l3.hintVisible) {
+      const msgs=['Proviamo...','Chissà....','E se lo mettessimo...?'];
+      const msg = msgs[Math.floor(l3.hintBlink/48)%3];
+      ctx.fillStyle='#aaa';
+      ctx.fillText(msg, W/2, ry+rh+14);
+    } else {
+      ctx.fillStyle='#555';
+      ctx.fillText("spingi l'oggetto nella posizione giusta", W/2, ry+rh+14);
+    }
+    ctx.textAlign='left';
   }
 }
 </script>
