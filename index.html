@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0a0a1a"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <title>CARLO'S QUEST v27</title>
+  <title>CARLO'S QUEST</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <meta http-equiv="Pragma" content="no-cache"/>
   <link rel="manifest" href="manifest.json"/>
@@ -1268,16 +1268,16 @@ function updateLevel2() {
     // Palle guru
     if (l2.guruState === 'angry') {
       l2.guruBallTimer++;
-      if (l2.guruBallTimer % 28 === 0 && l2.guruBalls.length < 12) {
+      if (l2.guruBallTimer % 22 === 0 && l2.guruBalls.length < 15) {
         // Posizione guru nel mondo quando angry
       const guruWorldX = (l2.guruState==='angry') ? player.x + 80 : W*0.65;
       const gx = guruWorldX, gy2 = gy - 100;
         const dx = (player.x + 14) - gx;
         const dy = (player.y - player.h/2) - gy2;
         const d  = Math.sqrt(dx*dx + dy*dy) || 1;
-        l2.guruBalls.push({ x: gx, y: gy2, vx: dx/d*4, vy: dy/d*4, life: 140, trail: [] });
+        l2.guruBalls.push({ x: gx, y: gy2, vx: dx/d*4, vy: dy/d*4, life: 300, trail: [] });
       }
-      l2.guruBalls = l2.guruBalls.filter(b => b.life > 0 && b.x < W * 0.85);
+      l2.guruBalls = l2.guruBalls.filter(b => b.life > 0);
       l2.guruBalls.forEach(b => {
         b.trail.push({x:b.x, y:b.y});
         if (b.trail.length > 7) b.trail.shift();
@@ -1956,9 +1956,9 @@ const L3_FIRST_OBJ = [
 
 // Scelte per ogni stanza (obj 2 e obj 3)
 const L3_BONUS_CHOICES = [
-  [ {emoji:'🌿',label:'PIANTA'}, {emoji:'🐘',label:'ELEFANTE'}, {emoji:'📺',label:'TV'} ],
-  [ {emoji:'📚',label:'LIBRERIA'}, {emoji:'🎮',label:'CONSOLE'}, {emoji:'🎸',label:'CHITARRA'} ],
-  [ {emoji:'🖼️',label:'QUADRO'}, {emoji:'🪴',label:'ORCHIDEA'}, {emoji:'🐈',label:'GATTINO'} ],
+  [ {emoji:'🍳',label:'PADELLA'}, {emoji:'🦩',label:'FENICOTTERO'}, {emoji:'🛶',label:'CANOA'} ],
+  [ {emoji:'📚',label:'LIBRERIA'}, {emoji:'🪆',label:'MANUELA\nBATTAGLIA'}, {emoji:'🪣',label:'TAPPETO'} ],
+  [ {emoji:'💡',label:'LAMPADA'}, {emoji:'🎨',label:'TAPPETO\nCOLORATO'}, {emoji:'👩‍💼',label:'MANUELA\nBATTAGLIA'} ],
 ];
 
 let l3 = {
