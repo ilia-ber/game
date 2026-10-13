@@ -108,6 +108,15 @@
   <p>Ora bisogna<br/>sistemarla... ♥</p>
   <button class="startBtn" id="btnLevel3" style="background:#2d7a27" onclick="document.getElementById('screenL2Win').classList.add('hidden'); startLevel3();">AVANTI ▶</button>
 </div>
+<div class="overlay hidden" id="screenGameWin">
+  <h1>🏠❤️<br/>FINALMENTE<br/>A CASA!</h1>
+  <h2>SIETE ARRIVATI<br/>AL VOSTRO NIDO!</h2>
+  <p>Vissero felici e<br/>contenti ♥</p>
+</div>
+<div id="l3choiceUI" style="display:none;position:fixed;bottom:145px;left:0;right:0;z-index:40;flex-direction:column;align-items:center;background:rgba(10,10,30,0.97);padding:12px 8px;border-top:2px solid #ffe066;border-bottom:2px solid #ffe066;">
+  <div id="l3choiceLabel" style="font-family:'Press Start 2P',monospace;font-size:8px;color:#ffe066;margin-bottom:10px;">COSA MANCA?</div>
+  <div id="l3choiceBtns" style="display:flex;gap:10px;justify-content:center;"></div>
+</div>
 
 <script>
 // ── CANVAS SETUP ─────────────────────────────────────
@@ -2059,10 +2068,9 @@ function updateLevel3() {
     }
   }
 
-  // Dopo bonus piazzato: stanza completata
+  // Dopo bonus piazzato: esce a destra della stanza
   if (l3.phase === 'bonus_place' && l3.bonusObj) {
-    // Piazzato quando player esce a destra
-    if (l3.px > room.w - 20) {
+    if (l3.px > room.w - 18) {
       nextL3Room();
     }
   }
@@ -2082,8 +2090,8 @@ function showL3Choices() {
   btns.innerHTML = '';
   choices.forEach((ch, i) => {
     const btn = document.createElement('button');
-    btn.style.cssText = "font-family:'Press Start 2P',monospace;font-size:8px;background:#2a2a3e;color:#fff;border:2px solid #ffe066;padding:10px 12px;border-radius:4px;cursor:pointer;";
-    btn.innerHTML = ch.emoji + '<br><span style="font-size:6px">' + ch.label + '</span>';
+    btn.style.cssText = "font-family:'Press Start 2P',monospace;font-size:7px;background:#1a1a3e;color:#fff;border:2px solid #ffe066;padding:12px 16px;border-radius:6px;cursor:pointer;min-width:80px;text-align:center;";
+    btn.innerHTML = '<div style="font-size:26px;line-height:1.2">' + ch.emoji + '</div>' + ch.label;
     btn.onclick = () => chooseL3Bonus(ch);
     btns.appendChild(btn);
   });
@@ -2139,110 +2147,124 @@ function drawLevel3() {
   const room = L3_ROOMS[l3.room];
 
   // Sfondo
-  ctx.fillStyle = '#1a1a2e';
+  ctx.fillStyle = '#0d0d1a';
   ctx.fillRect(0, 0, W, H);
 
-  // Stanza centrata
-  const rx = (W - room.w) / 2;
-  const ry = (H - room.h) / 2 - 20;
+  // ── PLANIMETRIA IN ALTO ──
+  const mapLayout = [
+    {name:'SALOTTO', x:0,   y:0,   w:180, h:140, color:'#f5f0e8'},
+    {name:'STUDIO',  x:180, y:0,   w:140, h:120, color:'#eef0f5'},
+    {name:'CAMERA',  x:0,   y:140, w:160, h:160, color:'#f5eef0'},
+  ];
+  const msc = 0.28;
+  const mapTW = 320*msc, mapTH = 300*msc;
+  const mapX = (W-mapTW)/2, mapY = 48;
+  ctx.fillStyle='#111118'; ctx.fillRect(mapX-2,mapY-2,mapTW+4,mapTH+4);
+  mapLayout.forEach((mr,i) => {
+    const sx=mapX+mr.x*msc, sy=mapY+mr.y*msc, sw=mr.w*msc, sh=mr.h*msc;
+    ctx.fillStyle = i<l3.room ? '#1a3a1a' : i===l3.room ? mr.color : '#111118';
+    ctx.fillRect(sx,sy,sw,sh);
+    ctx.strokeStyle = i===l3.room ? '#ffe066' : '#333';
+    ctx.lineWidth = i===l3.room ? 2 : 1;
+    ctx.strokeRect(sx,sy,sw,sh);
+    ctx.font='5px "Press Start 2P"'; ctx.textAlign='center';
+    ctx.fillStyle = i===l3.room ? '#ffe066' : i<l3.room ? '#44ff44' : '#444';
+    ctx.fillText(i<l3.room ? '✓' : mr.name.substring(0,6), sx+sw/2, sy+sh/2+2);
+    ctx.textAlign='left';
+  });
+
+  // ── STANZA ZOOM ──
+  const zoomTop = mapY + mapTH + 10;
+  const zoomBot = H - 150;
+  const zoomH = zoomBot - zoomTop;
+  const sc2 = Math.min((W-20)/room.w, zoomH/room.h);
+  const rw = Math.round(room.w*sc2), rh = Math.round(room.h*sc2);
+  const rx = (W-rw)/2, ry = zoomTop + (zoomH-rh)/2;
 
   // Pavimento
   ctx.fillStyle = room.color;
-  ctx.fillRect(rx, ry, room.w, room.h);
+  ctx.fillRect(rx, ry, rw, rh);
   // Griglia pavimento
-  ctx.strokeStyle = 'rgba(0,0,0,0.08)';
-  ctx.lineWidth = 1;
-  for (let gx = rx; gx < rx+room.w; gx+=30) { ctx.beginPath(); ctx.moveTo(gx,ry); ctx.lineTo(gx,ry+room.h); ctx.stroke(); }
-  for (let gy = ry; gy < ry+room.h; gy+=30) { ctx.beginPath(); ctx.moveTo(rx,gy); ctx.lineTo(rx+room.w,gy); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1;
+  const gs = 30*sc2;
+  for (let gx=rx; gx<=rx+rw; gx+=gs){ctx.beginPath();ctx.moveTo(gx,ry);ctx.lineTo(gx,ry+rh);ctx.stroke();}
+  for (let gy=ry; gy<=ry+rh; gy+=gs){ctx.beginPath();ctx.moveTo(rx,gy);ctx.lineTo(rx+rw,gy);ctx.stroke();}
   // Bordi muri
-  ctx.strokeStyle = '#555'; ctx.lineWidth = 4;
-  ctx.strokeRect(rx, ry, room.w, room.h);
+  ctx.strokeStyle = '#666'; ctx.lineWidth = 3;
+  ctx.strokeRect(rx, ry, rw, rh);
   // Uscita destra
-  ctx.fillStyle = '#8b6914';
-  ctx.fillRect(rx+room.w-4, ry+room.h/2-20, 8, 40);
-  ctx.fillStyle = '#ffe066'; ctx.font='6px "Press Start 2P"'; ctx.textAlign='center';
-  ctx.fillText('USCITA', rx+room.w, ry+room.h/2-28); ctx.textAlign='left';
-
+  const exitY = ry + rh/2 - 15;
+  ctx.fillStyle = '#b8860b'; ctx.fillRect(rx+rw-5, exitY, 9, 30);
+  if (l3.phase==='bonus_place') {
+    ctx.fillStyle='#ffe066'; ctx.font='6px "Press Start 2P"'; ctx.textAlign='center';
+    ctx.fillText('→ ESCI', rx+rw+22, exitY-4); ctx.textAlign='left';
+  }
   // Nome stanza
-  ctx.font='9px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
-  ctx.fillText(room.name, W/2, ry-12); ctx.textAlign='left';
+  ctx.font='8px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
+  ctx.fillText(room.name + ' — ' + (l3.room+1) + '/3', W/2, zoomTop-4); ctx.textAlign='left';
 
-  // Oggetto principale
+  // Oggetto principale (grande, scalato)
   if (l3.obj) {
     const obj = l3.obj;
-    ctx.font='28px serif'; ctx.textAlign='center';
-    ctx.fillText(obj.def.emoji, rx+obj.x+obj.def.w/2, ry+obj.y+obj.def.h/2+8);
-    // Highlight quando Carlo è vicino
-    const pw=16,ph=16;
-    const nearX = Math.abs((l3.px+8)-(obj.x+obj.def.w/2)) < obj.def.w/2+pw;
-    const nearY = Math.abs((l3.py+8)-(obj.y+obj.def.h/2)) < obj.def.h/2+ph;
+    const ox = rx + obj.x*sc2, oy = ry + obj.y*sc2;
+    const ow = obj.def.w*sc2, oh = obj.def.h*sc2;
+    const nearX = Math.abs((l3.px+9)*sc2 - obj.x*sc2 - ow/2) < ow/2+14*sc2;
+    const nearY = Math.abs((l3.py+9)*sc2 - obj.y*sc2 - oh/2) < oh/2+14*sc2;
     if (nearX && nearY && l3.phase==='push') {
-      ctx.strokeStyle='#ffe066'; ctx.lineWidth=2;
-      ctx.strokeRect(rx+obj.x, ry+obj.y, obj.def.w, obj.def.h);
+      ctx.fillStyle='rgba(255,230,0,0.15)'; ctx.fillRect(ox-4,oy-4,ow+8,oh+8);
+      ctx.strokeStyle='#ffe066'; ctx.lineWidth=2; ctx.strokeRect(ox-4,oy-4,ow+8,oh+8);
+      ctx.font='6px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.textAlign='center';
+      ctx.fillText('SPINGI!',ox+ow/2,oy-6); ctx.textAlign='left';
     }
-    ctx.textAlign='left';
+    ctx.font=Math.round(Math.max(ow,oh)*0.9)+'px serif'; ctx.textAlign='center';
+    ctx.fillText(obj.def.emoji, ox+ow/2, oy+oh*0.85); ctx.textAlign='left';
   }
 
   // Bonus object
   if (l3.bonusObj) {
-    ctx.font='24px serif'; ctx.textAlign='center';
-    ctx.fillText(l3.bonusObj.emoji, rx+l3.bonusObj.x+16, ry+l3.bonusObj.y+22);
-    ctx.textAlign='left';
+    const bx2=rx+l3.bonusObj.x*sc2, by2=ry+l3.bonusObj.y*sc2;
+    ctx.font=Math.round(36*sc2)+'px serif'; ctx.textAlign='center';
+    ctx.fillText(l3.bonusObj.emoji, bx2+16*sc2, by2+28*sc2); ctx.textAlign='left';
   }
 
-  // Carlo (top-down sprite)
-  const carlox = rx + l3.px;
-  const carloy = ry + l3.py;
-  // Ombra
-  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(carlox+9,carloy+18,9,4,0,0,Math.PI*2); ctx.fill();
-  // Corpo maglietta rossa
-  ctx.fillStyle='#9b1515'; ctx.fillRect(carlox+3,carloy+8,12,10);
-  // Testa
-  ctx.fillStyle='#fcd5a0'; ctx.beginPath(); ctx.arc(carlox+9,carloy+7,7,0,Math.PI*2); ctx.fill();
-  // Capelli biondi
-  ctx.fillStyle='#c8920a'; ctx.beginPath(); ctx.arc(carlox+9,carloy+4,7,Math.PI,0); ctx.fill();
-  ctx.fillRect(carlox+2,carloy+2,14,5);
-  // Occhi
-  ctx.fillStyle='#5bc8f0'; ctx.fillRect(carlox+5,carloy+7,3,3); ctx.fillRect(carlox+11,carloy+7,3,3);
-  // Pantaloni
-  ctx.fillStyle='#1e1e1e'; ctx.fillRect(carlox+3,carloy+16,5,6); ctx.fillRect(carlox+10,carloy+16,5,6);
+  // ── CARLO (scalato) ──
+  const cs = sc2;
+  const carlox = rx + l3.px*sc2;
+  const carloy = ry + l3.py*sc2;
+  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(carlox+9*cs,carloy+21*cs,9*cs,3*cs,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#1e1e1e'; ctx.fillRect(carlox+3*cs,carloy+14*cs,5*cs,7*cs); ctx.fillRect(carlox+10*cs,carloy+14*cs,5*cs,7*cs);
+  ctx.fillStyle='#2d5a27'; ctx.fillRect(carlox+2*cs,carloy+20*cs,6*cs,3*cs); ctx.fillRect(carlox+10*cs,carloy+20*cs,6*cs,3*cs);
+  ctx.fillStyle='#9b1515'; ctx.fillRect(carlox+2*cs,carloy+8*cs,14*cs,8*cs);
+  ctx.fillStyle='#fcd5a0'; ctx.beginPath(); ctx.arc(carlox+9*cs,carloy+6*cs,7*cs,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#c8920a'; ctx.beginPath(); ctx.arc(carlox+9*cs,carloy+3*cs,7*cs,Math.PI,0); ctx.fill();
+  ctx.fillRect(carlox+2*cs,carloy+1*cs,14*cs,5*cs);
+  ctx.fillStyle='#5bc8f0'; ctx.fillRect(carlox+5*cs,carloy+6*cs,3*cs,3*cs); ctx.fillRect(carlox+11*cs,carloy+6*cs,3*cs,3*cs);
 
-  // Ilia (top-down sprite, segue Carlo)
-  const iliax = carlox - 22;
-  const iliay = carloy;
-  // Ombra
-  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(iliax+7,iliay+17,7,3,0,0,Math.PI*2); ctx.fill();
-  // Corpo vestito nero
-  ctx.fillStyle='#1a1a1a'; ctx.fillRect(iliax+1,iliay+8,11,10);
-  // Testa
-  ctx.fillStyle='#fcd5a0'; ctx.beginPath(); ctx.arc(iliax+7,iliay+7,6,0,Math.PI*2); ctx.fill();
-  // Capelli castani lunghi
-  ctx.fillStyle='#8b5a2b'; ctx.beginPath(); ctx.arc(iliax+7,iliay+4,6,Math.PI,0); ctx.fill();
-  ctx.fillRect(iliax+1,iliay+2,12,5);
-  ctx.fillRect(iliax-1,iliay+6,3,12); ctx.fillRect(iliax+12,iliay+6,3,12);
-  // Occhi scuri
-  ctx.fillStyle='#2a1a0e'; ctx.fillRect(iliax+4,iliay+7,2,2); ctx.fillRect(iliax+9,iliay+7,2,2);
-  // Pantaloni neri
-  ctx.fillStyle='#141414'; ctx.fillRect(iliax+2,iliay+16,4,5); ctx.fillRect(iliax+8,iliay+16,4,5);
+  // ── ILIA (scalata) ──
+  const iliax = carlox - 18*cs, iliay = carloy + 2*cs;
+  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(iliax+7*cs,iliay+18*cs,7*cs,3*cs,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#141414'; ctx.fillRect(iliax+2*cs,iliay+13*cs,4*cs,6*cs); ctx.fillRect(iliax+8*cs,iliay+13*cs,4*cs,6*cs);
+  ctx.fillStyle='#1a1a1a'; ctx.fillRect(iliax+1*cs,iliay+7*cs,12*cs,8*cs);
+  ctx.fillStyle='#fcd5a0'; ctx.beginPath(); ctx.arc(iliax+7*cs,iliay+6*cs,6*cs,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#8b5a2b'; ctx.beginPath(); ctx.arc(iliax+7*cs,iliay+3*cs,6*cs,Math.PI,0); ctx.fill();
+  ctx.fillRect(iliax+1*cs,iliay+1*cs,12*cs,5*cs);
+  ctx.fillRect(iliax-1*cs,iliay+5*cs,3*cs,12*cs); ctx.fillRect(iliax+12*cs,iliay+5*cs,3*cs,12*cs);
+  ctx.fillStyle='#2a1a0e'; ctx.fillRect(iliax+4*cs,iliay+6*cs,2*cs,2*cs); ctx.fillRect(iliax+9*cs,iliay+6*cs,2*cs,2*cs);
 
-  // Dialog Ilia
+  // ── DIALOG ILIA ──
   if (l3.iliaDialogTimer > 0) {
-    const bx=16, by=62, bw=W-32, bh=100;
-    ctx.fillStyle='rgba(0,0,10,0.92)'; ctx.fillRect(bx,by,bw,bh);
+    const bx=10, by=mapY+mapTH+2, bw=W-20, bh=46;
+    ctx.fillStyle='rgba(0,0,10,0.95)'; ctx.fillRect(bx,by,bw,bh);
     ctx.strokeStyle='#ffe066'; ctx.lineWidth=2; ctx.strokeRect(bx,by,bw,bh);
-    ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.fillText('ILIA:',bx+10,by+18);
+    ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#ffe066'; ctx.fillText('ILIA:',bx+8,by+14);
     ctx.fillStyle='#fff';
-    l3.iliaDialog.split('\n').forEach((line,i) => ctx.fillText(line, bx+10, by+38+i*22));
+    l3.iliaDialog.split('\n').forEach((line,i) => ctx.fillText(line, bx+8, by+28+i*14));
   }
 
-  // HUD stanza
-  ctx.font='7px "Press Start 2P"'; ctx.fillStyle='#aaa'; ctx.textAlign='right';
-  ctx.fillText('STANZA '+(l3.room+1)+'/3', W-10, 55); ctx.textAlign='left';
-
-  // Hint push
-  if (l3.phase==='push') {
-    ctx.font='6px "Press Start 2P"'; ctx.fillStyle='#888'; ctx.textAlign='center';
-    ctx.fillText('spingilo nella posizione giusta →', W/2, H-168); ctx.textAlign='left';
+  // Hint
+  if (l3.phase==='push' && l3.iliaDialogTimer===0) {
+    ctx.font='6px "Press Start 2P"'; ctx.fillStyle='#666'; ctx.textAlign='center';
+    ctx.fillText("spingi l'oggetto a destra →", W/2, ry+rh+14); ctx.textAlign='left';
   }
 }
 </script>
