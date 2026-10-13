@@ -79,6 +79,10 @@
     <div class="ctrlBtn" id="btnPowerup"><span id="powerupEmoji">📱</span><span id="healLabel">CHIAMA</span></div>
     <div class="ctrlBtn" id="btnJump">▲</div>
   </div>
+  <div class="btnGroup" id="btnGroupUD" style="display:none;">
+    <div class="ctrlBtn" id="btnUp">▲</div>
+    <div class="ctrlBtn" id="btnDown">▼</div>
+  </div>
 </div>
 
 <div class="overlay" id="screenStart">
@@ -1389,6 +1393,8 @@ function handleGuruTap() {
         l3.active = false;
         document.getElementById('screenGameWin').classList.remove('hidden');
         state = 'win3';
+        document.getElementById('btnGroupUD').style.display = 'none';
+        document.getElementById('btnJump').style.display = 'flex';
       } else {
         initL3Room(l3.room + 1);
       }
@@ -1997,6 +2003,9 @@ function startLevel3() {
   level = 3;
   state = 'playing';
   l3.active = true;
+  // Mostra frecce su/giù, nascondi salto
+  document.getElementById('btnGroupUD').style.display = 'flex';
+  document.getElementById('btnJump').style.display = 'none';
   initL3Room(0);
   const em = document.getElementById('powerupEmoji');
   const hl = document.getElementById('healLabel');
