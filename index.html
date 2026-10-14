@@ -362,10 +362,34 @@ function drawCarlo() {
   const sx = Math.round(sc(player.x));
   const p=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
   ctx.save(); ctx.translate(sx, Math.round(player.y));
-  if (player.facing < 0) { ctx.scale(-1,1); ctx.translate(-player.w, 0); }
-  p(1,-5,8,5,'#111'); p(11,-5,8,5,'#111');
-  p(2,-18,14,13,'#2d5a27'); p(3,-30,13,13,'#9b1515');
-  p(5,-42,8,14,'#fcd5a0'); p(3,-50,14,10,'#c8920a');
+  if (player.facing < 0) { ctx.scale(-1,1); ctx.translate(-player.w,0); }
+  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fillRect(2,0,18,3);
+  // Scarpe
+  p(1,-5,8,5,'#1a1a1a'); p(11,-5,8,5,'#1a1a1a');
+  p(0,-4,9,4,'#2d5a27'); p(11,-4,9,4,'#2d5a27');
+  // Pantaloni
+  p(2,-18,8,13,'#1e3a1e'); p(12,-18,8,13,'#1e3a1e');
+  // Maglietta
+  p(1,-30,20,13,'#9b1515');
+  // Braccia
+  p(-3,-29,4,11,'#9b1515'); p(-3,-19,4,4,'#fcd5a0');
+  p(20,-29,4,11,'#9b1515'); p(20,-19,4,4,'#fcd5a0');
+  // Collo
+  p(7,-34,7,5,'#fcd5a0');
+  // Testa
+  p(3,-44,16,12,'#fcd5a0');
+  // Capelli
+  p(2,-50,18,8,'#c8920a');
+  p(0,-48,4,6,'#c8920a'); p(18,-48,4,6,'#c8920a');
+  // Bandana
+  p(3,-46,16,4,'#cc2222');
+  // Occhi
+  p(6,-41,4,4,'#5bc8f0'); p(13,-41,4,4,'#5bc8f0');
+  p(6,-41,2,2,'#fff'); p(13,-41,2,2,'#fff');
+  p(7,-40,2,2,'#1a5a8a'); p(14,-40,2,2,'#1a5a8a');
+  // Naso/bocca
+  p(10,-37,2,2,'#e8a090');
+  p(8,-34,6,2,'#cc7060');
   ctx.restore();
 }
 
